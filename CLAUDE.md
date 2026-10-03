@@ -66,6 +66,8 @@ Contract between frontend and backend; change only with team agreement.
 - `verifications`: id, credential_id, checked_at, source, result (`verified` | `not_found` | `excluded` | `mismatch` | `error`), details (JSON), evidence_path
 - `alerts`: id, credential_id, threshold (`90` | `60` | `30` | `expired` | `excluded`), sent_to, sent_at, channel
 
+Optional (nullable) columns: `associates.npi`, `credential_types.renewal_months`, `credentials.number`, `credentials.issued_date`, `credentials.expires_date` (empty for credentials that don't expire, such as the NPI and OIG checks), `verifications.evidence_path`.
+
 Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`, `expired`, `verification_failed`, `excluded`.
 
 ## API (FastAPI, prefix `/api`)
