@@ -101,11 +101,16 @@ def test_verify_mock_records_a_verification(client):
 def test_verify_uses_npi_registry(client, monkeypatch):
     monkeypatch.setattr(
         nppes, "lookup_npi",
-        lambda npi: {"basic": {"status": "A", "first_name": "A", "last_name": "B"}, "taxonomies": []},
+        lambda npi: {
+            "basic": {"status": "A", "first_name": "Test", "last_name": "Person"},
+            "taxonomies": [{"desc": "Radiologic Technologist"}],
+        },
     )
     associate_id, _ = add_associate(None, type_name="NPI Registration", source="NPPES", npi="1234567893")
     results = client.post("/api/verify/associate/%d" % associate_id).json()
-    assert results[0]["result"] == "verified" and results[0]["details"]["registry_name"] == "A B"
+    assert results[0]["result"] == "verified"
+    assert results[0]["details"]["registry_name"] == "Test Person"
+    assert results[0]["details"]["taxonomy_matches_role"] is True
 
 
 def test_fake_npi_is_not_looked_up(client, monkeypatch):
