@@ -26,6 +26,12 @@ class Base(DeclarativeBase):
     pass
 
 
+def ensure_indexes() -> None:
+    for table in Base.metadata.tables.values():
+        for index in table.indexes:
+            index.create(engine, checkfirst=True)
+
+
 def get_db() -> Iterator[Session]:
     db = SessionLocal()
     try:
