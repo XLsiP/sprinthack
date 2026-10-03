@@ -1,5 +1,7 @@
 // Typed client for the FastAPI backend. Keep in sync with api/schemas.py.
 
+import { mockAlertRun, mockAlerts } from "./mocks";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type CredentialStatus =
@@ -84,6 +86,59 @@ export interface Scope {
   facility?: string;
 }
 
+export interface CredentialQuery extends Scope {
+  status?: CredentialStatus[];
+  expires_before?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AssociateQuery extends Scope {
+  status?: CredentialStatus[];
+  sort?: "urgency" | "name";
+  limit?: number;
+  offset?: number;
+}
+
+/** One page of a list endpoint; `total` is the match count before `limit` and `offset` (X-Total-Count). */
+export interface Page<T> {
+  items: T[];
+  total: number;
+}
+
+// Provisional: the backend has no alert schemas yet, so these follow the data model in CLAUDE.md.
+export type AlertThreshold = "90" | "60" | "30" | "expired" | "excluded";
+
+export interface Alert {
+  id: number;
+  credential_id: number;
+  threshold: AlertThreshold;
+  sent_to: string;
+  sent_at: string;
+  channel: string;
+}
+
+export interface AlertRunResult {
+  sent: number;
+  by_threshold: Partial<Record<AlertThreshold, number>>;
+}
+
+/** Data from an endpoint that may still be mocked. Show a "MOCK DATA" label when `isMock` is true. */
+export interface MaybeMock<T> {
+  data: T;
+  isMock: boolean;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 type Params = Record<string, string | number | string[] | undefined>;
 
 function url(path: string, params: Params = {}): string {
@@ -96,21 +151,61 @@ function url(path: string, params: Params = {}): string {
   return `${API_URL}/api${path}${query ? `?${query}` : ""}`;
 }
 
-async function request<T>(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<T> {
+async function send(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<Response> {
   const res = await fetch(url(path, params), { method });
-  if (!res.ok) throw new Error(`${method} ${path} failed (${res.status})`);
-  return (await res.json()) as T;
+  if (res.ok) return res;
+  let message = `${method} ${path} failed (${res.status})`;
+  try {
+    const body: unknown = await res.json();
+    if (body && typeof body === "object" && "detail" in body && typeof body.detail === "string") {
+      message += `: ${body.detail}`;
+    }
+  } catch {
+    // Body was not JSON; keep the status-only message.
+  }
+  throw new ApiError(message, res.status);
+}
+
+async function request<T>(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<T> {
+  return (await (await send(path, params, method)).json()) as T;
+}
+
+async function page<T>(path: string, params: Params): Promise<Page<T>> {
+  const res = await send(path, params);
+  const items = (await res.json()) as T[];
+  const header = res.headers.get("X-Total-Count");
+  return { items, total: header === null ? items.length : Number(header) };
+}
+
+// MOCK: remove when backend alerts router merges (call `request` directly and drop MaybeMock).
+async function orMock<T>(load: () => Promise<T>, mock: () => T, label: string): Promise<MaybeMock<T>> {
+  try {
+    return { data: await load(), isMock: false };
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
+    console.warn(`${label} returned 404; showing MOCK DATA until the backend alerts router merges.`);
+    return { data: mock(), isMock: true };
+  }
+}
+
+/** Link to the evidence PDF for one verification. */
+export function evidenceUrl(verificationId: number): string {
+  return url(`/evidence/${verificationId}.pdf`);
 }
 
 export const api = {
+  health: () => request<{ status: "ok" }>("/health"),
   stats: (scope: Scope = {}) => request<Stats>("/stats", { ...scope }),
   filters: () => request<Filters>("/filters"),
-  credentials: (params: Scope & { status?: CredentialStatus[]; expires_before?: string; limit?: number } = {}) =>
-    request<Credential[]>("/credentials", { ...params }),
-  associates: (params: Scope & { status?: CredentialStatus; limit?: number } = {}) =>
-    request<Associate[]>("/associates", { ...params }),
+  credentials: (params: CredentialQuery = {}) => request<Credential[]>("/credentials", { ...params }),
+  credentialsPage: (params: CredentialQuery = {}) => page<Credential>("/credentials", { ...params }),
+  associates: (params: AssociateQuery = {}) => request<Associate[]>("/associates", { ...params }),
+  associatesPage: (params: AssociateQuery = {}) => page<Associate>("/associates", { ...params }),
   associate: (id: number) => request<AssociateDetail>(`/associates/${id}`),
   verifyCredential: (id: number) => request<Verification>(`/verify/credential/${id}`, undefined, "POST"),
   verifyAssociate: (id: number) => request<Verification[]>(`/verify/associate/${id}`, undefined, "POST"),
   verifyAll: (scope: Scope = {}) => request<VerifyAllResult>("/verify/all", { ...scope }, "POST"),
+  // MOCK: these fall back to lib/mocks.ts on a 404; remove the fallback when backend alerts router merges.
+  alerts: () => orMock(() => request<Alert[]>("/alerts"), mockAlerts, "GET /api/alerts"),
+  runAlerts: () => orMock(() => request<AlertRunResult>("/alerts/run", undefined, "POST"), mockAlertRun, "POST /api/alerts/run"),
 };
