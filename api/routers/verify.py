@@ -19,6 +19,11 @@ def verify_credential(credential_id: int, db: Session = Depends(get_db)) -> Veri
     credential = db.scalar(select(Credential).where(Credential.id == credential_id).options(*CREDENTIAL_LOAD))
     if credential is None:
         raise HTTPException(404, "Credential not found")
+    if verify.is_manual(credential):
+        raise HTTPException(
+            409, "This credential is verified by hand at %s; record the result instead"
+            % credential.credential_type.issuing_source,
+        )
     verification = verify.run(db, credential)
     db.commit()
     return VerificationOut.model_validate(verification)
@@ -32,7 +37,8 @@ def verify_associate(associate_id: int, db: Session = Depends(get_db)) -> list[V
     if not credentials:
         raise HTTPException(404, "Associate not found or has no credentials")
     # One short pause for the whole associate rather than one per credential.
-    verifications = [verify.run(db, c, delay=(i == 0)) for i, c in enumerate(credentials)]
+    automatic = [c for c in credentials if not verify.is_manual(c)]  # hand-verified credentials are left alone
+    verifications = [verify.run(db, c, delay=(i == 0)) for i, c in enumerate(automatic)]
     db.commit()
     return [VerificationOut.model_validate(v) for v in verifications]
 
@@ -47,7 +53,11 @@ def verify_all(
     """Re-verify every credential in scope (all of them when no filter is given)."""
     query = filter_associates(select(Credential).join(Associate), manager, department, facility)
     results: Counter[str] = Counter()
+    skipped = 0
     for credential in db.scalars(query.options(*CREDENTIAL_LOAD)):
+        if verify.is_manual(credential):
+            skipped += 1
+            continue
         results[verify.run(db, credential, delay=False).result] += 1
     db.commit()
-    return VerifyAllOut(checked=sum(results.values()), by_result=dict(results))
+    return VerifyAllOut(checked=sum(results.values()), by_result=dict(results), skipped_manual=skipped)

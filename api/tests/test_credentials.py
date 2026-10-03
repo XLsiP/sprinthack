@@ -25,8 +25,10 @@ def add_credential(number, expires_in_days, department="Radiology", facility="Ep
                    manager="rad@example.org"):
     """One associate holding one BLS credential; `expires_in_days=None` means it never expires."""
     with SessionLocal() as db:
-        ctype = db.query(CredentialType).filter_by(name="BLS").first() or CredentialType(
-            name="BLS", issuing_source="American Heart Association", verify_method="mock", renewal_months=24
+        # A credential with no expiry date belongs to a type that never expires, like the OIG check.
+        name, months = ("BLS", 24) if expires_in_days is not None else ("OIG Exclusion Check", None)
+        ctype = db.query(CredentialType).filter_by(name=name).first() or CredentialType(
+            name=name, issuing_source="American Heart Association", verify_method="mock", renewal_months=months
         )
         associate = Associate(
             name="Holder of %s" % number, role="Registered Nurse", department=department, facility=facility,

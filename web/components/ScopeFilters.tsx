@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { DEMO_MANAGER, useRole } from "@/components/Providers";
+import { useDemoManager, useRole } from "@/components/Providers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, type Scope } from "@/lib/api";
 
@@ -41,12 +41,13 @@ function Filter({
 export function useScope(): { scope: Scope; filters: React.ReactNode } {
   const { role } = useRole();
   const [picked, setPicked] = useState<Scope>({});
-  const options = useQuery({ queryKey: ["filters"], queryFn: api.filters, enabled: role === "hr" });
+  const options = useQuery({ queryKey: ["filters"], queryFn: api.filters, staleTime: Infinity });
+  const demo = useDemoManager();
 
   if (role === "manager") {
     return {
-      scope: { manager: DEMO_MANAGER },
-      filters: <p className="text-sm text-muted-foreground">Your team: Radiology, Memorial Hospital of South Bend</p>,
+      scope: { manager: demo.manager },
+      filters: <p className="text-sm text-muted-foreground">Your team: {demo.team}</p>,
     };
   }
   const set = (key: keyof Scope) => (value: string | undefined) => setPicked((p) => ({ ...p, [key]: value }));

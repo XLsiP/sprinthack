@@ -5,12 +5,15 @@ Usage: python seed.py --reset        (start over)
 Dates are relative to today so the dashboard always shows a mix of statuses.
 """
 import argparse
+import os
 import random
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from sqlalchemy import func, select
 
+import roster
 from db import Base, SessionLocal, engine
 from models import Associate, Credential, CredentialType, RoleRequirement, Verification
 from status import refresh_statuses
@@ -107,7 +110,9 @@ def within_renewal(days: int, renewal_months: int) -> int:
     return 91 + (days - 91) % (longest - 90)
 
 
-def seed(reset: bool, today: Optional[date] = None, if_empty: bool = False) -> int:
+def seed(
+    reset: bool, today: Optional[date] = None, if_empty: bool = False, roster_path: Optional[str] = None
+) -> int:
     """Seed the database and return the number of associates. With `if_empty`, leave existing data alone."""
     rng = random.Random(42)
     today = today or date.today()
@@ -120,6 +125,14 @@ def seed(reset: bool, today: Optional[date] = None, if_empty: bool = False) -> i
             if if_empty:
                 return 0
             raise SystemExit("Database already has data. Run: python seed.py --reset")
+
+        roster_file = roster_path or os.environ.get("ROSTER_FILE", "").strip()
+        if roster_file:  # a real roster replaces the synthetic data entirely
+            path = Path(roster_file)
+            count = roster.load(db, path if path.is_absolute() else Path(__file__).resolve().parent / path)
+            db.commit()
+            refresh_statuses(db, today)
+            return count
 
         types = {}
         prefixes = {}
@@ -208,6 +221,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reset", action="store_true", help="drop and recreate all tables first")
     parser.add_argument("--if-empty", action="store_true", help="seed only when there is no data (used on deploy)")
+    parser.add_argument("--roster", metavar="CSV", help="load this staff roster instead of synthetic data")
     args = parser.parse_args()
-    seeded = seed(args.reset, if_empty=args.if_empty)
+    seeded = seed(args.reset, if_empty=args.if_empty, roster_path=args.roster)
     print("Seeded %d associates." % seeded if seeded else "Database already has data; left as is.")

@@ -1,16 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { CredentialTable } from "@/components/CredentialTable";
 import { CredentialTimeline } from "@/components/CredentialTimeline";
-import { DEMO_MANAGER, useRole } from "@/components/Providers";
+import { useDemoManager, useRole } from "@/components/Providers";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
@@ -96,6 +96,7 @@ export default function AssociatePage() {
   const id = Number(useParams<{ id: string }>().id);
   const queryClient = useQueryClient();
   const { role } = useRole();
+  const { manager: demoManager } = useDemoManager();
   const associate = useQuery({ queryKey: ["associate", id], queryFn: () => api.associate(id) });
 
   // Refetch before the toast so the badge and "Last verified" have already updated when it appears.
@@ -128,7 +129,8 @@ export default function AssociatePage() {
     );
   }
   const a = associate.data;
-  if (role === "manager" && a.manager_email !== DEMO_MANAGER) {
+  const automatic = a.credentials.filter((c) => c.verify_method !== "manual").length;
+  if (role === "manager" && a.manager_email !== demoManager) {
     return (
       <div className="space-y-4">
         <BackLink />
@@ -146,6 +148,21 @@ export default function AssociatePage() {
   const verifiedCount = a.credentials.filter((c) => c.last_verification?.result === "verified").length;
 
   const verifyButton = (credential: Credential) => {
+    if (credential.verify_method === "manual") {
+      // Checked by a person at the source; the app never looks these up itself.
+      return credential.lookup_url ? (
+        <a
+          href={credential.lookup_url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Look up ${credential.credential_type} at ${credential.issuing_source}`}
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+        >
+          <ExternalLink aria-hidden />
+          <span className="max-lg:sr-only">Look up</span>
+        </a>
+      ) : null;
+    }
     const running = verifyAll.isPending || (verifyOne.isPending && verifyOne.variables.id === credential.id);
     return (
       <Button
@@ -187,7 +204,11 @@ export default function AssociatePage() {
             <p className="text-sm text-muted-foreground tabular-nums" role="status">
               {verifiedCount} of {a.credentials.length} checked
             </p>
-            <Button onClick={() => verifyAll.mutate()} disabled={busy || a.credentials.length === 0}>
+            <Button
+              onClick={() => verifyAll.mutate()}
+              disabled={busy || automatic === 0}
+              title={automatic === 0 && a.credentials.length > 0 ? "These credentials are checked by hand at the source" : undefined}
+            >
               <RefreshCw className={verifyAll.isPending ? "animate-spin" : undefined} aria-hidden />
               {verifyAll.isPending ? "Verifying…" : "Verify now"}
             </Button>

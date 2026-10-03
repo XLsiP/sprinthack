@@ -4,6 +4,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 
 export type CredentialStatus =
   | "valid"
+  | "unverified"
   | "expiring_90"
   | "expiring_60"
   | "expiring_30"
@@ -32,6 +33,7 @@ export interface Credential {
   credential_type: string;
   issuing_source: string;
   verify_method: string;
+  lookup_url: string | null; // where a person checks a hand-verified credential
   number: string | null;
   issued_date: string | null;
   expires_date: string | null;
@@ -70,11 +72,14 @@ export interface Filters {
   facilities: string[];
   departments: string[];
   managers: string[];
+  demo_manager: string | null; // the manager with the largest team; the Manager view shows this team
+  demo_team: string | null; // that team's department and facility
 }
 
 export interface VerifyAllResult {
   checked: number;
   by_result: Partial<Record<VerificationResult, number>>;
+  skipped_manual?: number; // credentials verified by hand, left alone
 }
 
 /** Scope shared by the list, stats and verify-all endpoints. */

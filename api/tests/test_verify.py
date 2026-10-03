@@ -114,7 +114,9 @@ def test_verify_all_counts_and_persists_only_filtered_credentials(client, determ
     response = client.post("/api/verify/all", params={"department": "Radiology"})
 
     assert response.status_code == 200
-    assert response.json() == {"checked": 2, "by_result": {"verified": 1, "not_found": 1}}
+    assert response.json() == {
+        "checked": 2, "by_result": {"verified": 1, "not_found": 1}, "skipped_manual": 0,
+    }
     with SessionLocal() as db:
         rows = list(db.scalars(select(Verification)))
         assert len(rows) == 2
@@ -127,7 +129,7 @@ def test_verify_all_empty_scope_returns_zero_counts(client, deterministic_verifi
     response = client.post("/api/verify/all", params={"department": "Emergency"})
 
     assert response.status_code == 200
-    assert response.json() == {"checked": 0, "by_result": {}}
+    assert response.json() == {"checked": 0, "by_result": {}, "skipped_manual": 0}
     with SessionLocal() as db:
         assert db.scalar(select(Verification.id)) is None
 

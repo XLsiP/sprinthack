@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { AlertRunButton } from "@/components/AlertRunButton";
 import { AlertTable } from "@/components/AlertTable";
-import { DEMO_MANAGER, useRole } from "@/components/Providers";
+import { useDemoManager, useRole } from "@/components/Providers";
 import { THRESHOLD } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,18 +22,19 @@ export default function AlertsPage() {
   const [shown, setShown] = useState(PAGE);
 
   const isManager = role === "manager";
+  const { manager: demoManager } = useDemoManager();
 
   const alerts = useQuery({ queryKey: ["alerts"], queryFn: api.alerts });
   const credentials = useQuery({
-    queryKey: ["credentials", "alerted", role],
-    queryFn: () => api.allCredentials({ status: ALERTED, manager: isManager ? DEMO_MANAGER : undefined }),
+    queryKey: ["credentials", "alerted", role, demoManager],
+    queryFn: () => api.allCredentials({ status: ALERTED, manager: isManager ? demoManager : undefined }),
   });
   const byId = useMemo(() => new Map((credentials.data ?? []).map((c) => [c.id, c])), [credentials.data]);
 
   // One row per recipient, so a manager's alerts are exactly the rows sent to them.
   const visible = useMemo(
-    () => (alerts.data ? alerts.data.filter((a) => !isManager || a.sent_to === DEMO_MANAGER) : undefined),
-    [alerts.data, isManager],
+    () => (alerts.data ? alerts.data.filter((a) => !isManager || a.sent_to === demoManager) : undefined),
+    [alerts.data, isManager, demoManager],
   );
   const counts = useMemo(() => {
     const out = Object.fromEntries(THRESHOLDS.map((t) => [t, 0])) as Record<AlertThreshold, number>;

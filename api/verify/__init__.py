@@ -24,6 +24,11 @@ VERIFIERS = {
 }
 
 
+def is_manual(credential: Credential) -> bool:
+    """True for credentials a person verifies by hand at the source; no verifier may run on them."""
+    return credential.credential_type.verify_method == "manual"
+
+
 def run(db: Session, credential: Credential, delay: bool = True) -> Verification:
     """Verify one credential against its source, record the result, and refresh its status."""
     source = credential.credential_type.issuing_source

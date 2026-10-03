@@ -47,6 +47,7 @@ export const STATUS: Record<CredentialStatus, { label: string; tone: keyof typeo
   expiring_30: { label: "Expires in 30 days", tone: "orange", icon: Clock },
   expiring_60: { label: "Expires in 60 days", tone: "yellow", icon: Clock },
   expiring_90: { label: "Expires in 90 days", tone: "yellow", icon: Clock },
+  unverified: { label: "Not yet verified", tone: "gray", icon: CircleHelp },
   valid: { label: "Valid", tone: "green", icon: CircleCheck },
 };
 

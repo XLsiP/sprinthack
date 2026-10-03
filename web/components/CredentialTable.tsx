@@ -13,6 +13,7 @@ import { checkedAt } from "@/lib/format";
 
 /** Date and days left as two unbreakable pieces, so a page that lets this cell wrap never splits the date. */
 function expiry(c: Credential): React.ReactNode {
+  if (c.status === "unverified") return "Not on file";
   if (c.expires_date === null || c.days_left === null) return "Does not expire";
   const left = c.days_left < 0 ? `(${-c.days_left}d ago)` : `(${c.days_left}d)`;
   return (

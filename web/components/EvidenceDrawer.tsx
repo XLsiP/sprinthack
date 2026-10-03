@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Download, RefreshCw } from "lucide-react";
+import { Ban, Download, ExternalLink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { MockBadge, ResultBadge, StatusBadge, UnverifiedBadge } from "@/components/StatusBadge";
@@ -120,7 +120,7 @@ function DrawerBody({
         </SheetDescription>
         <p className="pt-1 text-sm text-muted-foreground">
           {c.number ? `Number ${c.number}` : "No number on file"} ·{" "}
-          {c.expires_date ? `Expires ${c.expires_date}` : "Does not expire"}
+          {c.expires_date ? `Expires ${c.expires_date}` : c.status === "unverified" ? "Expiry not on file" : "Does not expire"}
         </p>
         <div className="pt-1">
           <StatusBadge status={c.status} />
@@ -187,10 +187,20 @@ function DrawerBody({
       </div>
 
       <SheetFooter className="items-end">
-        <Button onClick={onVerify} disabled={running} variant={v ? "outline" : "default"}>
-          <RefreshCw className={running ? "animate-spin" : undefined} aria-hidden />
-          {running ? "Verifying…" : v ? "Verify this again" : "Verify now"}
-        </Button>
+        {c.verify_method === "manual" ? (
+          // Checked by a person at the source; the app never looks these up itself.
+          c.lookup_url && (
+            <a href={c.lookup_url} target="_blank" rel="noreferrer" className={buttonVariants()}>
+              <ExternalLink aria-hidden />
+              Look up at {c.issuing_source}
+            </a>
+          )
+        ) : (
+          <Button onClick={onVerify} disabled={running} variant={v ? "outline" : "default"}>
+            <RefreshCw className={running ? "animate-spin" : undefined} aria-hidden />
+            {running ? "Verifying…" : v ? "Verify this again" : "Verify now"}
+          </Button>
+        )}
       </SheetFooter>
     </>
   );
