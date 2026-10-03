@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import access
 import scheduler
 import seed
 from db import Base, SessionLocal, engine, ensure_indexes
@@ -51,6 +52,14 @@ def cors_settings() -> dict:
 
 
 app = FastAPI(title="Beacon Credentialing Tracker", lifespan=lifespan)
+
+
+# Registered before CORS so CORS wraps it and a 401 still carries the CORS headers the browser needs.
+@app.middleware("http")
+async def require_access_password(request: Request, call_next):
+    if access.blocks(request):
+        return JSONResponse(status_code=401, content={"detail": "Access password required"})
+    return await call_next(request)
 
 
 @app.exception_handler(StarletteHTTPException)

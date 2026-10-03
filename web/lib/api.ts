@@ -1,9 +1,12 @@
 // Typed client for the FastAPI backend. Keep in sync with api/schemas.py.
 
+import { getAccessPassword } from "./access";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type CredentialStatus =
   | "valid"
+  | "unverified"
   | "expiring_90"
   | "expiring_60"
   | "expiring_30"
@@ -32,6 +35,7 @@ export interface Credential {
   credential_type: string;
   issuing_source: string;
   verify_method: string;
+  lookup_url: string | null; // where a person checks a hand-verified credential
   number: string | null;
   issued_date: string | null;
   expires_date: string | null;
@@ -70,11 +74,14 @@ export interface Filters {
   facilities: string[];
   departments: string[];
   managers: string[];
+  demo_manager: string | null; // the manager with the largest team; the Manager view shows this team
+  demo_team: string | null; // that team's department and facility
 }
 
 export interface VerifyAllResult {
   checked: number;
   by_result: Partial<Record<VerificationResult, number>>;
+  skipped_manual?: number; // credentials verified by hand, left alone
 }
 
 /** Scope shared by the list, stats and verify-all endpoints. */
@@ -138,6 +145,11 @@ export interface DailyJobStatus {
   last_run: DailyRunResult | null;
 }
 
+export interface AccessStatus {
+  required: boolean;
+  granted: boolean;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -161,7 +173,10 @@ function url(path: string, params: Params = {}): string {
 }
 
 async function send(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<Response> {
-  const res = await fetch(url(path, params), { method });
+  // Only sent when a password is set, so an open API gets no CORS preflight.
+  const password = getAccessPassword();
+  const headers = password ? { "X-Access-Password": password } : undefined;
+  const res = await fetch(url(path, params), { method, headers });
   if (res.ok) return res;
   let message = `${method} ${path} failed (${res.status})`;
   try {
@@ -199,11 +214,13 @@ async function allCredentials(params: Omit<CredentialQuery, "limit" | "offset"> 
 
 /** Link to the evidence PDF for one verification. */
 export function evidenceUrl(verificationId: number): string {
-  return url(`/evidence/${verificationId}.pdf`);
+  // A plain link cannot send a header, so the password travels as a query parameter.
+  return url(`/evidence/${verificationId}.pdf`, { access: getAccessPassword() });
 }
 
 export const api = {
   health: () => request<{ status: "ok" }>("/health"),
+  access: () => request<AccessStatus>("/access"),
   stats: (scope: Scope = {}) => request<Stats>("/stats", { ...scope }),
   filters: () => request<Filters>("/filters"),
   credentials: (params: CredentialQuery = {}) => request<Credential[]>("/credentials", { ...params }),

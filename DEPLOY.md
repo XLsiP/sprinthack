@@ -59,10 +59,12 @@ Save; Render redeploys. Until `CORS_ORIGINS` is set, the site loads but every da
 | `CORS_ORIGINS` | yes | Comma-separated site URLs allowed to call the API. |
 | `CORS_ORIGIN_REGEX` | no | Extra allowed origins by pattern, e.g. `https://your-project-.*\.vercel\.app` for Vercel preview deployments. |
 | `APP_URL` | yes | Site URL used in alert email links. |
+| `ACCESS_PASSWORD` | no | Shared password for the whole site. When set, every `/api` route except `/api/health` and `/api/access` requires it, and the site asks for it once per browser session. Set it before loading any real staff data. |
 | `HR_EMAIL` | yes | HR recipient for alerts. Set to `hr@example.org` by the blueprint. |
 | `RESEND_API_KEY` | no | Turns on real alert email. Without it, alerts stay in the outbox. |
 | `ALERT_EMAIL_OVERRIDE_TO` | no | Send every alert email to this one inbox. Needed for a real send, because seed addresses are `@example.org`. |
 | `SEED_IF_EMPTY` | no | `1` seeds an empty database at startup. Automatic on Render. |
+| `ROSTER_FILE` | no | Path to a staff roster CSV to load instead of synthetic data when the database is empty. Set `ACCESS_PASSWORD` too. |
 | `SCHEDULER_ENABLED` | no | `0` turns off the 06:00 daily job. |
 | `MOCK_DELAY_MS` | no | Simulated lookup delay for mocked sources. |
 | `DATABASE_URL` | no | Use Postgres instead of the built-in SQLite file. |

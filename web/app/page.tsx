@@ -16,7 +16,7 @@ import { api, type CredentialStatus, type Stats } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const URGENT: CredentialStatus[] = [
-  "excluded", "expired", "verification_failed", "expiring_30", "expiring_60", "expiring_90",
+  "excluded", "expired", "verification_failed", "expiring_30", "expiring_60", "expiring_90", "unverified",
 ];
 
 const PAGE_SIZE = 25;
