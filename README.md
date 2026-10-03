@@ -1,55 +1,35 @@
-# Credentialing
+# Beacon Credentialing Tracker
 
-Checks clinical staff credentials against public sources, tracks expiration dates, and alerts managers and HR before a credential lapses.
+Verifies clinical staff credentials against public sources, tracks expiration dates, and alerts managers and HR before a credential lapses. Project details and conventions are in [CLAUDE.md](CLAUDE.md).
 
 ## Run it
 
-Needs Python 3.9+.
+Needs Python 3.11+ and Node 20+.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+# backend: http://localhost:8000 (API docs at /docs)
+cd api && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+python seed.py --reset
+uvicorn main:app --reload --port 8000
 
-python seed.py                 # load fake demo data
-uvicorn app.main:app --reload  # http://localhost:8000
+# frontend: http://localhost:3000
+cd web && npm install
+npm run dev
 ```
 
-- Dashboard: http://localhost:8000
-- Interactive API docs: http://localhost:8000/docs
-- Tests: `python -m pytest`
-- Print today's alerts: `python -m app.alerts`
-
-## What's here
-
-| File | What it does |
-| --- | --- |
-| `app/main.py` | FastAPI routes |
-| `app/db.py` | SQLite schema and connection (`credentials.db`, git-ignored) |
-| `app/alerts.py` | Expiration status (expired / critical ≤30d / warning ≤90d / ok) and alert list |
-| `app/verify.py` | Lookup against the CMS NPI Registry |
-| `static/index.html` | Single-page dashboard, no build step |
-| `seed.py` | Fake demo data |
+Tests: `cd api && python -m pytest`
 
 ## What works
 
-- Add staff and credentials, see them sorted by expiration with a status.
-- `GET /api/alerts?days=90` lists what is expired or expiring, and who should be told.
-- "Verify" checks a staff member's NPI against the [NPI Registry](https://npiregistry.cms.hhs.gov/api-page) (free, no key) and matches license numbers and states.
+- Dashboard with status counts and an urgent-first credential list, scoped by role (Manager: the demo radiology team; HR: filter by facility, department, manager).
+- All-credentials table and an associate profile with "Verify now".
+- Verification: NPPES NPI Registry is real; ARRT, NMTCB, state licenses, BLS and OIG LEIE are mocks (labeled in `api/verify/`).
+- Seed data: 1,500 synthetic associates across 11 facilities, including the 60-person radiology team.
 
-## What's not built yet
+## Not built yet
 
-- **Sending alerts.** `alerts.send()` only prints. Swap in email, Slack, or SMS, and run it on a schedule.
-- **More sources.** The NPI Registry has no expiration dates and only covers licenses. Candidates: OIG exclusion list (LEIE), state licensing boards, Nursys.
-- **Login and roles** (manager vs HR views).
-- **Editing and deleting** records from the dashboard.
+- Real OIG LEIE lookup (CSV download).
+- Evidence PDFs, alert sending and the outbox page, scheduled re-verification, charts, deploy.
 
-The seed staff are fake and have no NPI, so "Verify" needs a staff member added with a real NPI.
-
-## Working together
-
-```bash
-git checkout -b your-feature
-# make changes
-git push -u origin your-feature   # then open a pull request
-```
+Seed NPIs are deliberately invalid so they can never match a real provider, which means NPPES verification reports them as not found.
