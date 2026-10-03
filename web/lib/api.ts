@@ -121,6 +121,7 @@ export interface Alert {
 export interface AlertRunResult {
   sent: number;
   by_threshold: Partial<Record<AlertThreshold, number>>;
+  by_channel?: { email: number; outbox: number }; // alert rows emailed vs left in the outbox
 }
 
 export interface DailyRunResult {
