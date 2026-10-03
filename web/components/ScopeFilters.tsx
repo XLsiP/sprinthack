@@ -46,7 +46,7 @@ export function useScope(): { scope: Scope; filters: React.ReactNode } {
   if (role === "manager") {
     return {
       scope: { manager: DEMO_MANAGER },
-      filters: <p className="text-sm text-muted-foreground">Your team: Radiology, Memorial Hospital</p>,
+      filters: <p className="text-sm text-muted-foreground">Your team: Radiology, Memorial Hospital of South Bend</p>,
     };
   }
   const set = (key: keyof Scope) => (value: string | undefined) => setPicked((p) => ({ ...p, [key]: value }));
