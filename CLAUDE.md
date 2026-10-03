@@ -116,15 +116,12 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 
 ## Data rules
 
-- Synthetic data only. No real staff names, real employee NPIs, or PHI in the repo.
-- Seed ~1,500 associates across all 11 facilities, including a 60-person radiology department (the demo manager's team) with valid, expiring, expired, and one LEIE-excluded person.
+- **The app's data is a real staff roster**, `api/rosters/kzo.csv` (Beacon Kalamazoo imaging: names, managers, and which source verifies each credential). It contains real names, so **this repo must stay private** and every deployment must set `ACCESS_PASSWORD`.
+- **Nothing is invented about real people.** Roster credentials have no number, dates or verification and start `unverified`. Dates and results only come from a real lookup. Roles are assumed from which list a person is on, and manager emails are `first.last@example.org` placeholders, because the roster has neither.
+- No PHI, and no NPIs for roster people.
+- Roster credential types are `verify_method="manual"`: no mock verifier ever runs on them, and the UI links to the source's lookup page.
+- `python seed.py --reset` loads the roster. `--synthetic` (or `SEED_SYNTHETIC=1`) generates 1,500 invented associates instead, with a 60-person radiology team and a mix of statuses; the tests use this and must never contain real names (`api/tests/fixtures/roster.csv` is invented). `--roster <csv>` or `ROSTER_FILE` loads a different roster: columns `first_name, last_name, manager, source`, with `source` one of `ARRT`, `ARDMS`, `NMTCB`, `MI_LARA` (see `api/roster.py`).
 - Gitignored: `.env*`, `api/data/`, `api/evidence/`, `*.db`, `node_modules/`, `.next/`, `__pycache__/`, `.venv/`.
-
-## Real rosters
-
-- `python seed.py --reset --roster <csv>` (or `ROSTER_FILE` at startup) loads a staff roster instead of synthetic data: columns `first_name, last_name, manager, source`, where `source` is `ARRT`, `ARDMS`, `NMTCB` or `MI_LARA`. See `api/roster.py`.
-- Nothing is invented for roster people: credentials have no number, dates or verification and start `unverified`. Their types are `verify_method="manual"`, so no verifier (mock or real) ever runs on them; the UI links to the source's lookup page instead.
-- Roster files hold real names. Keep them in the git-ignored `api/data/` unless the team has agreed otherwise, and set `ACCESS_PASSWORD` on any deployment that loads one. Tests use the invented `api/tests/fixtures/roster.csv`.
 
 ## Running locally
 

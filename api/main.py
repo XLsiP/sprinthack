@@ -34,7 +34,10 @@ async def lifespan(app: FastAPI):
     ensure_indexes()
     if seed_on_start():
         seeded = seed.seed(reset=False, if_empty=True)
-        log.info("Seeded %d associates into an empty database" % seeded if seeded else "Database already has data")
+        log.info(
+            "Seeded %d associates from %s" % (seeded, seed.last_source) if seeded
+            else "Database already has data; not seeding"
+        )
     with SessionLocal() as db:
         refresh_statuses(db)
     scheduler.start()
