@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 import seed
-from db import SessionLocal
+from db import Base, SessionLocal, engine
 from models import Associate, Credential, CredentialType
 from verify.nppes import npi_checksum_ok
 
@@ -102,6 +102,16 @@ def test_seed_is_deterministic(associates):
 def test_seed_refuses_a_populated_database(associates):
     with pytest.raises(SystemExit):
         seed.seed(reset=False, today=TODAY)
+
+
+def test_if_empty_leaves_existing_data_alone(associates):
+    assert seed.seed(reset=False, today=TODAY, if_empty=True) == 0
+    assert len(load_associates()) == seed.TOTAL_ASSOCIATES
+
+
+def test_if_empty_seeds_an_empty_database():
+    Base.metadata.drop_all(engine)
+    assert seed.seed(reset=False, today=TODAY, if_empty=True) == seed.TOTAL_ASSOCIATES
 
 
 def test_no_credential_is_issued_in_the_future(associates):

@@ -20,6 +20,10 @@ npm run dev
 
 Tests: `cd api && python -m pytest`
 
+Evidence PDFs need the Pango libraries. On macOS: `brew install pango`, and if PDF downloads still fail with "cannot load library", start the API with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` set.
+
+Deploying: see [DEPLOY.md](DEPLOY.md).
+
 ## What works
 
 - Dashboard with status counts and an urgent-first credential list, scoped by role (Manager: the demo radiology team; HR: filter by facility, department, manager).
