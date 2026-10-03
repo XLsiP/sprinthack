@@ -63,7 +63,7 @@ export interface Stats {
   unverified: number;
   by_status: Record<CredentialStatus, number>;
   by_facility: { facility: string; total: number; by_status: Record<CredentialStatus, number> }[];
-  timeline: { month: string; count: number }[];
+  timeline: { start: string; end: string; count: number }[];
 }
 
 export interface Filters {

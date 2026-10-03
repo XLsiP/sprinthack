@@ -75,11 +75,11 @@ Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`,
 - `GET /health` (liveness check, returns `{"status": "ok"}`)
 - `GET /associates?manager=&department=&facility=&status=&sort=&limit=&offset=` (`status` repeatable; `sort` is `urgency` (default) or `name`; total matches in the `X-Total-Count` header)
 - `GET /associates/{id}` (with credentials + latest verifications)
-- `GET /credentials?status=&expires_before=`
+- `GET /credentials?status=&expires_before=&manager=&department=&facility=&limit=&offset=` (most urgent first; `status` repeatable; `expires_before` exclusive; total matches in the `X-Total-Count` header)
 - `POST /verify/credential/{id}` · `POST /verify/associate/{id}` · `POST /verify/all`
 - `GET /evidence/{verification_id}.pdf`
 - `GET /alerts` · `POST /alerts/run` (manual alert sweep for the demo)
-- `GET /stats` (counts by status, by facility, upcoming-expiry timeline)
+- `GET /stats?manager=&department=&facility=` (counts by status, by facility, and a timeline of expirations over the next 90 days in 13 weekly buckets)
 
 Backend generates OpenAPI at `/docs`. Keep `web/lib/api.ts` types in sync with `schemas.py`.
 
