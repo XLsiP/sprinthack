@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -14,13 +14,8 @@ from status import SEVERITY
 router = APIRouter(tags=["stats"])
 
 
-def _next_months(start: date, count: int) -> list[str]:
-    months = []
-    year, month = start.year, start.month
-    for _ in range(count):
-        months.append("%04d-%02d" % (year, month))
-        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
-    return months
+TIMELINE_DAYS = 90
+TIMELINE_WEEKS = 13  # 13 weeks = days 0 through 90
 
 
 @router.get("/stats", response_model=StatsOut)
@@ -30,6 +25,10 @@ def stats(
     facility: Optional[str] = None,
     db: Session = Depends(get_db),
 ) -> StatsOut:
+    """Counts for the dashboard, all scoped by the optional manager / department / facility filters.
+
+    `timeline` is credentials expiring in the next 90 days, in 13 weekly buckets starting today.
+    """
     def scoped(query):
         return filter_associates(query.join(Associate, Credential.associate_id == Associate.id), manager, department, facility)
 
@@ -43,11 +42,12 @@ def stats(
         facilities.setdefault(fac, dict.fromkeys(SEVERITY, 0))[status] = count
 
     today = date.today()
-    months = dict.fromkeys(_next_months(today, 12), 0)
-    for (expires,) in db.execute(scoped(select(Credential.expires_date)).where(Credential.expires_date >= today)):
-        key = expires.strftime("%Y-%m")
-        if key in months:
-            months[key] += 1
+    weeks = [0] * TIMELINE_WEEKS
+    upcoming = scoped(select(Credential.expires_date, func.count())).where(
+        Credential.expires_date.between(today, today + timedelta(days=TIMELINE_DAYS))
+    )
+    for expires, count in db.execute(upcoming.group_by(Credential.expires_date)):
+        weeks[(expires - today).days // 7] += count
 
     return StatsOut(
         associates=db.scalar(filter_associates(select(func.count(Associate.id)), manager, department, facility)) or 0,
@@ -57,7 +57,10 @@ def stats(
         by_facility=[
             FacilityStats(facility=f, total=sum(c.values()), by_status=c) for f, c in sorted(facilities.items())
         ],
-        timeline=[TimelinePoint(month=m, count=n) for m, n in months.items()],
+        timeline=[
+            TimelinePoint(start=today + timedelta(days=7 * i), end=today + timedelta(days=7 * i + 6), count=n)
+            for i, n in enumerate(weeks)
+        ],
     )
 
 

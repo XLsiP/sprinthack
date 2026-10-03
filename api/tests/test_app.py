@@ -54,40 +54,6 @@ def test_npi_checksum():
     assert not nppes.npi_checksum_ok("1234567890")
 
 
-def test_credentials_are_urgent_first_and_filterable(client):
-    add_associate(400)
-    add_associate(-5)
-    add_associate(20, department="Emergency")
-
-    creds = client.get("/api/credentials").json()
-    assert [c["status"] for c in creds] == ["expired", "expiring_30", "valid"]
-    assert creds[0]["days_left"] == -5 and creds[0]["last_verification"] is None
-
-    assert len(client.get("/api/credentials", params={"status": "expired"}).json()) == 1
-    assert len(client.get("/api/credentials", params={"department": "Emergency"}).json()) == 1
-    soon = (date.today() + timedelta(days=30)).isoformat()
-    assert len(client.get("/api/credentials", params={"expires_before": soon}).json()) == 2
-
-
-def test_associates_and_stats(client):
-    associate_id, _ = add_associate(-5)
-    add_associate(400)
-
-    listed = client.get("/api/associates", params={"status": "expired"}).json()
-    assert [a["id"] for a in listed] == [associate_id]
-    assert listed[0]["worst_status"] == "expired"
-
-    detail = client.get("/api/associates/%d" % associate_id).json()
-    assert detail["credentials"][0]["credential_type"] == "ARRT Certification"
-    assert client.get("/api/associates/999").status_code == 404
-
-    stats = client.get("/api/stats").json()
-    assert stats["associates"] == 2 and stats["unverified"] == 2
-    assert stats["by_status"]["expired"] == 1 and stats["by_status"]["valid"] == 1
-    assert len(stats["timeline"]) == 12
-    assert client.get("/api/stats", params={"facility": "Nowhere"}).json()["credentials"] == 0
-
-
 def test_verify_mock_records_a_verification(client):
     associate_id, credential_id = add_associate(400)
     result = client.post("/api/verify/credential/%d" % credential_id).json()

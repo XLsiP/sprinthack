@@ -112,7 +112,8 @@ class FacilityStats(BaseModel):
 
 
 class TimelinePoint(BaseModel):
-    month: str  # YYYY-MM
+    start: date  # first and last day of the week, both inclusive
+    end: date
     count: int
 
 
@@ -122,7 +123,7 @@ class StatsOut(BaseModel):
     unverified: int
     by_status: dict[str, int]
     by_facility: list[FacilityStats]
-    timeline: list[TimelinePoint]  # credentials expiring in each of the next 12 months
+    timeline: list[TimelinePoint]  # credentials expiring in the next 90 days, by week
 
 
 class FiltersOut(BaseModel):
