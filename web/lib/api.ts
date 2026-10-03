@@ -78,6 +78,14 @@ export interface Filters {
   demo_team: string | null; // that team's department and facility
 }
 
+/** What a person saw when they looked a credential up at its source. */
+export interface ManualVerification {
+  result: "verified" | "not_found";
+  number?: string;
+  expires_date?: string;
+  note?: string;
+}
+
 export interface VerifyAllResult {
   checked: number;
   by_result: Partial<Record<VerificationResult, number>>;
@@ -172,11 +180,22 @@ function url(path: string, params: Params = {}): string {
   return `${API_URL}/api${path}${query ? `?${query}` : ""}`;
 }
 
-async function send(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<Response> {
-  // Only sent when a password is set, so an open API gets no CORS preflight.
+async function send(
+  path: string,
+  params?: Params,
+  method: "GET" | "POST" = "GET",
+  body?: unknown,
+): Promise<Response> {
+  // The password header is only sent when one is set, so an open API gets no CORS preflight.
   const password = getAccessPassword();
-  const headers = password ? { "X-Access-Password": password } : undefined;
-  const res = await fetch(url(path, params), { method, headers });
+  const headers: Record<string, string> = {};
+  if (password) headers["X-Access-Password"] = password;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(url(path, params), {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (res.ok) return res;
   let message = `${method} ${path} failed (${res.status})`;
   try {
@@ -229,6 +248,8 @@ export const api = {
   associatesPage: (params: AssociateQuery = {}) => page<Associate>("/associates", { ...params }),
   associate: (id: number) => request<AssociateDetail>(`/associates/${id}`),
   verifyCredential: (id: number) => request<Verification>(`/verify/credential/${id}`, undefined, "POST"),
+  recordManualVerification: async (id: number, body: ManualVerification) =>
+    (await (await send(`/verify/credential/${id}/manual`, undefined, "POST", body)).json()) as Verification,
   verifyAssociate: (id: number) => request<Verification[]>(`/verify/associate/${id}`, undefined, "POST"),
   verifyAll: (scope: Scope = {}) => request<VerifyAllResult>("/verify/all", { ...scope }, "POST"),
   allCredentials,

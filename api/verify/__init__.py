@@ -1,5 +1,6 @@
 """One adapter per issuing source. Look up by CredentialType.issuing_source."""
 from datetime import date, datetime, timezone
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,39 @@ def apply_to_credential(credential: Credential, details: dict) -> None:
 def is_manual(credential: Credential) -> bool:
     """True for credentials a person verifies by hand at the source; no verifier may run on them."""
     return credential.credential_type.verify_method == "manual"
+
+
+def record_manual(
+    db: Session, credential: Credential, result: str, number: Optional[str] = None,
+    expires_date: Optional[date] = None, issued_date: Optional[date] = None, note: Optional[str] = None,
+) -> Verification:
+    """Record a lookup a person did at the source, and update the credential from what they saw."""
+    details: dict = {"entered_by_hand": True}
+    if result == "verified":
+        if number:
+            credential.number = number.strip()
+        if expires_date:
+            credential.expires_date = expires_date
+        if issued_date:
+            credential.issued_date = issued_date
+        details.update({
+            "number": credential.number,
+            "expires_date": credential.expires_date.isoformat() if credential.expires_date else None,
+        })
+    else:
+        details["reason"] = "Not found at the source when checked by hand"
+    if note:
+        details["note"] = note.strip()
+    verification = Verification(
+        credential=credential,
+        checked_at=datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0),
+        source=credential.credential_type.issuing_source,
+        result=result,
+        details=details,
+    )
+    db.add(verification)
+    refresh_credential(credential)
+    return verification
 
 
 def run(db: Session, credential: Credential, delay: bool = True) -> Verification:
