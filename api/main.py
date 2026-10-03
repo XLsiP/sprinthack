@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import Base, SessionLocal, engine
-from routers import associates, credentials, health, stats, verify
+from routers import associates, credentials, evidence, health, stats, verify
 from status import refresh_statuses
 
 
@@ -26,5 +26,5 @@ app.add_middleware(
     expose_headers=["X-Total-Count"],
 )
 
-for module in (health, associates, credentials, stats, verify):
+for module in (health, associates, credentials, evidence, stats, verify):
     app.include_router(module.router, prefix="/api")
