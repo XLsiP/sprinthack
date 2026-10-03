@@ -11,10 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Credential } from "@/lib/api";
 import { checkedAt } from "@/lib/format";
 
-function expiry(c: Credential): string {
+/** Date and days left as two unbreakable pieces, so a page that lets this cell wrap never splits the date. */
+function expiry(c: Credential): React.ReactNode {
   if (c.expires_date === null || c.days_left === null) return "Does not expire";
-  if (c.days_left < 0) return `${c.expires_date} (${-c.days_left}d ago)`;
-  return `${c.expires_date} (${c.days_left}d)`;
+  const left = c.days_left < 0 ? `(${-c.days_left}d ago)` : `(${c.days_left}d)`;
+  return (
+    <>
+      <span className="whitespace-nowrap">{c.expires_date}</span> <span className="whitespace-nowrap">{left}</span>
+    </>
+  );
 }
 
 export function CredentialTable({
@@ -96,7 +101,8 @@ export function CredentialTable({
                     }}
                   >
                     <FileText aria-hidden />
-                    Evidence
+                    {/* Icon only on narrow screens (and at high zoom) so the actions column fits without scrolling. */}
+                    <span className="max-lg:sr-only">Evidence</span>
                   </Button>
                   {action?.(c)}
                 </div>
