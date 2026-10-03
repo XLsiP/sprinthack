@@ -12,6 +12,19 @@ from verify.base import VerificationResult
 
 NPI_URL = "https://npiregistry.cms.hhs.gov/api/"
 
+ROLE_TAXONOMIES = {
+    "radiologist": ("radiology",),
+    "radiologictechnologist": ("radiologictechnologist",),
+    "cttechnologist": ("radiologictechnologist",),
+    "mrtechnologist": ("radiologictechnologist",),
+    "nuclearmedicinetechnologist": ("nuclearmedicinetechnologist",),
+    "registerednurse": ("registerednurse",),
+    "nursepractitioner": ("nursepractitioner",),
+    "physician": ("physician",),
+    "respiratorytherapist": ("respiratorytherapist",),
+    "pharmacist": ("pharmacist",),
+}
+
 
 def npi_checksum_ok(npi: str) -> bool:
     """Luhn check over the NPI with the 80840 health-industry prefix."""
@@ -36,6 +49,28 @@ def lookup_npi(npi: str) -> Optional[dict]:
 
 def _norm(value: Optional[str]) -> str:
     return "".join(ch for ch in (value or "").upper() if ch.isalnum())
+
+
+def match_name(name: str, provider: dict) -> bool:
+    """Match the associate's first and last name to the NPPES individual record."""
+    expected = [_norm(part) for part in name.split() if _norm(part)]
+    basic = provider.get("basic") or {}
+    first = _norm(basic.get("first_name"))
+    last = _norm(basic.get("last_name"))
+    return len(expected) >= 2 and bool(first and last) and expected[0] == first and expected[-1] == last
+
+
+def match_taxonomy(role: str, provider: dict) -> bool:
+    """Match an associate role to one of the provider's NPPES taxonomy descriptions."""
+    role_key = _norm(role).lower()
+    expected = ROLE_TAXONOMIES.get(role_key)
+    taxonomies = provider.get("taxonomies") or []
+    if expected:
+        return any(
+            any(term in _norm(taxonomy.get("desc")).lower() for term in expected)
+            for taxonomy in taxonomies
+        )
+    return any(_norm(taxonomy.get("desc")).lower() == role_key for taxonomy in taxonomies)
 
 
 def match_license(provider: dict, number: Optional[str], state: Optional[str]) -> bool:
@@ -67,12 +102,16 @@ class NppesVerifier:
         if provider is None:
             return VerificationResult("not_found", self.source, {"npi": npi, "reason": "NPI not in registry"})
         basic = provider.get("basic", {})
+        name_matches = match_name(associate.name, provider)
+        taxonomy_matches_role = match_taxonomy(associate.role, provider)
         details = {
             "npi": npi,
             "registry_name": " ".join(p for p in (basic.get("first_name"), basic.get("last_name")) if p)
             or basic.get("organization_name"),
             "registry_status": basic.get("status"),
             "enumeration_date": basic.get("enumeration_date"),
+            "name_matches": name_matches,
+            "taxonomy_matches_role": taxonomy_matches_role,
             "licenses": [
                 {"license": t.get("license"), "state": t.get("state"), "taxonomy": t.get("desc")}
                 for t in provider.get("taxonomies", [])
@@ -80,4 +119,11 @@ class NppesVerifier:
         }
         if basic.get("status") != "A":
             return VerificationResult("mismatch", self.source, {**details, "reason": "NPI is not active"})
+        if not name_matches or not taxonomy_matches_role:
+            mismatches = []
+            if not name_matches:
+                mismatches.append("Registry name does not match the name on file")
+            if not taxonomy_matches_role:
+                mismatches.append("Registry taxonomy does not match the associate role")
+            return VerificationResult("mismatch", self.source, {**details, "reason": "; ".join(mismatches)})
         return VerificationResult("verified", self.source, details)
