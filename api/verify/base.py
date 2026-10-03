@@ -1,15 +1,15 @@
 from dataclasses import dataclass, field
-from typing import Optional, Protocol
+from typing import Literal, Protocol
 
 from models import Associate, Credential
 
 
 @dataclass
 class VerificationResult:
-    result: str  # verified | not_found | excluded | mismatch | error
+    result: Literal["verified", "not_found", "excluded", "mismatch", "error"]
     source: str
-    details: dict = field(default_factory=dict)
-    evidence_path: Optional[str] = None
+    details: dict[str, object] = field(default_factory=dict)
+    evidence_path: str | None = None
 
 
 class Verifier(Protocol):
