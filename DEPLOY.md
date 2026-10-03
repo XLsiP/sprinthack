@@ -11,7 +11,7 @@ Do the steps in this order: the frontend needs the API's URL, and the API needs 
 3. Wait for the first build (several minutes). When it is live, open `https://<your-service>.onrender.com/api/health`; it should return `{"status":"ok"}`.
 4. Copy the service URL (no trailing slash). You need it in step 2.
 
-The API seeds 1,500 synthetic associates on start whenever the database is empty. On Render this happens automatically; elsewhere set `SEED_IF_EMPTY=1`.
+The API loads the built-in staff roster (real names) on start whenever the database is empty, so set `ACCESS_PASSWORD` before sharing the site. On Render this happens automatically; elsewhere set `SEED_IF_EMPTY=1`.
 
 ### If the service was created by hand instead of from the blueprint
 
@@ -64,7 +64,8 @@ Save; Render redeploys. Until `CORS_ORIGINS` is set, the site loads but every da
 | `RESEND_API_KEY` | no | Turns on real alert email. Without it, alerts stay in the outbox. |
 | `ALERT_EMAIL_OVERRIDE_TO` | no | Send every alert email to this one inbox. Needed for a real send, because seed addresses are `@example.org`. |
 | `SEED_IF_EMPTY` | no | `1` seeds an empty database at startup. Automatic on Render. |
-| `ROSTER_FILE` | no | Path to a staff roster CSV to load instead of synthetic data when the database is empty. Set `ACCESS_PASSWORD` too. |
+| `ROSTER_FILE` | no | Path to a different roster CSV to load instead of the built-in one. If the file is missing, the built-in roster is used. |
+| `SEED_SYNTHETIC` | no | `1` loads 1,500 invented associates instead of the roster. |
 | `SCHEDULER_ENABLED` | no | `0` turns off the 06:00 daily job. |
 | `MOCK_DELAY_MS` | no | Simulated lookup delay for mocked sources. |
 | `DATABASE_URL` | no | Use Postgres instead of the built-in SQLite file. |

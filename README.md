@@ -10,7 +10,7 @@ Needs Python 3.11+ and Node 20+.
 # backend: http://localhost:8000 (API docs at /docs)
 cd api && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python seed.py --reset
+python seed.py --reset              # the real Kalamazoo roster; add --synthetic for 1,500 invented people
 uvicorn main:app --reload --port 8000
 
 # frontend: http://localhost:3000
@@ -29,7 +29,7 @@ Deploying: see [DEPLOY.md](DEPLOY.md).
 - Dashboard with status counts and an urgent-first credential list, scoped by role (Manager: the demo radiology team; HR: filter by facility, department, manager).
 - All-credentials table and an associate profile with "Verify now".
 - Verification: NPPES NPI Registry is real; ARRT, NMTCB, state licenses, BLS and OIG LEIE are mocks (labeled in `api/verify/`).
-- Seed data: 1,500 synthetic associates across 11 facilities, including the 60-person radiology team.
+- Data: the real Beacon Kalamazoo imaging roster (151 people, 5 managers), with nothing invented about them; keep this repo private. `python seed.py --reset --synthetic` gives 1,500 invented associates for trying every feature.
 
 ## Not built yet
 

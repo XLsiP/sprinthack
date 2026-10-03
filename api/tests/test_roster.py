@@ -121,7 +121,41 @@ def test_bad_rosters_are_rejected(tmp_path):
 
 def test_roster_file_env_is_used_on_startup(monkeypatch):
     Base.metadata.drop_all(engine)
+    monkeypatch.delenv("SEED_SYNTHETIC")
     monkeypatch.setenv("SEED_IF_EMPTY", "1")
     monkeypatch.setenv("ROSTER_FILE", str(FIXTURE))
     with TestClient(app) as c:
         assert c.get("/api/stats").json()["associates"] == 6
+
+
+def test_source_selection(monkeypatch, tmp_path):
+    monkeypatch.delenv("SEED_SYNTHETIC")
+    monkeypatch.delenv("ROSTER_FILE", raising=False)
+    assert seed.choose_source() == (seed.DEFAULT_ROSTER, "built-in roster kzo.csv")
+    assert seed.choose_source(synthetic=True)[0] is None
+    assert seed.choose_source(roster_path=str(FIXTURE))[0] == FIXTURE
+
+    monkeypatch.setenv("ROSTER_FILE", str(FIXTURE))
+    assert seed.choose_source()[0] == FIXTURE
+    monkeypatch.setenv("ROSTER_FILE", str(tmp_path / "missing.csv"))
+    assert seed.choose_source()[0] == seed.DEFAULT_ROSTER  # a bad setting must not stop the app starting
+
+    monkeypatch.setenv("SEED_SYNTHETIC", "1")
+    assert seed.choose_source()[0] is None
+    assert seed.choose_source(roster_path=str(FIXTURE))[0] == FIXTURE  # an explicit file still wins
+    with pytest.raises(SystemExit, match="Roster file not found"):
+        seed.choose_source(roster_path=str(tmp_path / "missing.csv"))
+
+
+def test_built_in_roster_loads(monkeypatch):
+    """Counts only: this test must never name the real people in the roster."""
+    monkeypatch.delenv("SEED_SYNTHETIC")
+    assert seed.seed(reset=True) == 151
+    assert seed.last_source == "built-in roster kzo.csv"
+    with SessionLocal() as db:
+        associates = db.scalars(select(Associate)).all()
+        credentials = db.scalars(select(Credential)).all()
+        assert len({a.manager_email for a in associates}) == 5
+        assert len(credentials) == 151 and {c.status for c in credentials} == {"unverified"}
+        assert all(c.number is None and c.expires_date is None for c in credentials)
+        assert db.scalars(select(Verification)).all() == []

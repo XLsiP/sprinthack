@@ -1,10 +1,16 @@
-"""Synthetic data generator. Every name, NPI and credential number here is invented.
+"""Load the app's starting data.
 
-Usage: python seed.py --reset        (start over)
-       python seed.py --if-empty     (seed only an empty database; used on deploy)
-Dates are relative to today so the dashboard always shows a mix of statuses.
+By default this loads the built-in staff roster (rosters/kzo.csv): real names, no invented credential
+details. `--synthetic` generates 1,500 invented associates instead, which the tests use.
+
+Usage: python seed.py --reset                 (start over with the roster)
+       python seed.py --reset --synthetic     (start over with invented data)
+       python seed.py --reset --roster FILE   (start over with another roster)
+       python seed.py --if-empty              (seed only an empty database; used on deploy)
+Synthetic dates are relative to today so the dashboard always shows a mix of statuses.
 """
 import argparse
+import logging
 import os
 import random
 from datetime import date, datetime, timedelta
@@ -110,10 +116,51 @@ def within_renewal(days: int, renewal_months: int) -> int:
     return 91 + (days - 91) % (longest - 90)
 
 
+DEFAULT_ROSTER = Path(__file__).resolve().parent / "rosters" / "kzo.csv"
+log = logging.getLogger("uvicorn.error")
+last_source = ""  # what the most recent seed() loaded, for the startup log
+
+
+def _truthy(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+def choose_source(roster_path: Optional[str] = None, synthetic: bool = False) -> tuple[Optional[Path], str]:
+    """Which data to load, and a description of why. None means the synthetic generator.
+
+    Order: an explicit `synthetic` or `roster_path` argument, then SEED_SYNTHETIC, then ROSTER_FILE,
+    then the built-in roster.
+    """
+    here = Path(__file__).resolve().parent
+    if synthetic:
+        return None, "synthetic data (requested)"
+    if roster_path:
+        path = Path(roster_path) if Path(roster_path).is_absolute() else here / roster_path
+        if not path.is_file():
+            raise SystemExit("Roster file not found: %s" % path)
+        return path, "roster %s" % path.name
+    if _truthy("SEED_SYNTHETIC"):
+        return None, "synthetic data (SEED_SYNTHETIC is set)"
+    configured = os.environ.get("ROSTER_FILE", "").strip()
+    if configured:
+        path = Path(configured) if Path(configured).is_absolute() else here / configured
+        if path.is_file():
+            return path, "roster %s (ROSTER_FILE)" % path.name
+        log.warning("ROSTER_FILE=%s was not found; using the built-in roster instead", configured)
+    if DEFAULT_ROSTER.is_file():
+        return DEFAULT_ROSTER, "built-in roster %s" % DEFAULT_ROSTER.name
+    return None, "synthetic data (no roster file present)"
+
+
 def seed(
-    reset: bool, today: Optional[date] = None, if_empty: bool = False, roster_path: Optional[str] = None
+    reset: bool, today: Optional[date] = None, if_empty: bool = False, roster_path: Optional[str] = None,
+    synthetic: bool = False,
 ) -> int:
-    """Seed the database and return the number of associates. With `if_empty`, leave existing data alone."""
+    """Seed the database and return the number of associates. With `if_empty`, leave existing data alone.
+
+    Loads the staff roster by default; see `choose_source` for how synthetic data is selected instead.
+    """
+    global last_source
     rng = random.Random(42)
     today = today or date.today()
     if reset:
@@ -126,10 +173,9 @@ def seed(
                 return 0
             raise SystemExit("Database already has data. Run: python seed.py --reset")
 
-        roster_file = roster_path or os.environ.get("ROSTER_FILE", "").strip()
-        if roster_file:  # a real roster replaces the synthetic data entirely
-            path = Path(roster_file)
-            count = roster.load(db, path if path.is_absolute() else Path(__file__).resolve().parent / path)
+        roster_file, last_source = choose_source(roster_path, synthetic)
+        if roster_file is not None:
+            count = roster.load(db, roster_file)
             db.commit()
             refresh_statuses(db, today)
             return count
@@ -221,7 +267,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reset", action="store_true", help="drop and recreate all tables first")
     parser.add_argument("--if-empty", action="store_true", help="seed only when there is no data (used on deploy)")
-    parser.add_argument("--roster", metavar="CSV", help="load this staff roster instead of synthetic data")
+    parser.add_argument("--roster", metavar="CSV", help="load this staff roster instead of the built-in one")
+    parser.add_argument("--synthetic", action="store_true", help="generate 1,500 invented associates instead")
     args = parser.parse_args()
-    seeded = seed(args.reset, if_empty=args.if_empty, roster_path=args.roster)
-    print("Seeded %d associates." % seeded if seeded else "Database already has data; left as is.")
+    seeded = seed(args.reset, if_empty=args.if_empty, roster_path=args.roster, synthetic=args.synthetic)
+    print("Seeded %d associates from %s." % (seeded, last_source) if seeded else "Database already has data; left as is.")
