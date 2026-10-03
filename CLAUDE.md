@@ -68,7 +68,7 @@ Contract between frontend and backend; change only with team agreement.
 
 Optional (nullable) columns: `associates.npi`, `credential_types.renewal_months`, `credentials.number`, `credentials.issued_date`, `credentials.expires_date` (empty for credentials that don't expire, such as the NPI and OIG checks), `verifications.evidence_path`.
 
-Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`, `expired`, `verification_failed`, `excluded`. Computed by `compute_status` in `api/status.py` from `expires_date` and the latest verification; precedence is excluded, expired, verification_failed (`not_found` or `mismatch`), then the expiry buckets. `error` results are ignored, so an unreachable source never clears an earlier exclusion or failure.
+Derived credential status: `valid`, `unverified`, `expiring_90`, `expiring_60`, `expiring_30`, `expired`, `verification_failed`, `excluded`. `unverified` is a credential of an expiring type with no expiry date on file and nothing verified yet (how every roster credential starts). Computed by `compute_status` in `api/status.py` from `expires_date` and the latest verification; precedence is excluded, expired, verification_failed (`not_found` or `mismatch`), then the expiry buckets. `error` results are ignored, so an unreachable source never clears an earlier exclusion or failure.
 
 ## API (FastAPI, prefix `/api`)
 
@@ -119,6 +119,12 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 - Synthetic data only. No real staff names, real employee NPIs, or PHI in the repo.
 - Seed ~1,500 associates across all 11 facilities, including a 60-person radiology department (the demo manager's team) with valid, expiring, expired, and one LEIE-excluded person.
 - Gitignored: `.env*`, `api/data/`, `api/evidence/`, `*.db`, `node_modules/`, `.next/`, `__pycache__/`, `.venv/`.
+
+## Real rosters
+
+- `python seed.py --reset --roster <csv>` (or `ROSTER_FILE` at startup) loads a staff roster instead of synthetic data: columns `first_name, last_name, manager, source`, where `source` is `ARRT`, `ARDMS`, `NMTCB` or `MI_LARA`. See `api/roster.py`.
+- Nothing is invented for roster people: credentials have no number, dates or verification and start `unverified`. Their types are `verify_method="manual"`, so no verifier (mock or real) ever runs on them; the UI links to the source's lookup page instead.
+- Roster files hold real names. Keep them in the git-ignored `api/data/` unless the team has agreed otherwise, and set `ACCESS_PASSWORD` on any deployment that loads one. Tests use the invented `api/tests/fixtures/roster.csv`.
 
 ## Running locally
 

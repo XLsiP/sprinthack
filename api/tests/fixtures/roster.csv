@@ -1,0 +1,10 @@
+first_name,last_name,manager,source
+Avery,Testperson,"Samplemgr,Morgan E",ARRT
+Blake,Testperson,"Samplemgr,Morgan E",ARRT
+Avery,Testperson,"Samplemgr,Morgan E",ARRT
+Casey,Example-Hyphen,"Othermgr, Riley",ARRT
+Devon,Fixture,"Samplemgr,Morgan E",ARDMS
+Devon,Fixture,"Samplemgr,Morgan E",ARDMS
+Emery,Placeholder,"Othermgr, Riley",NMTCB
+Finley,Invented,Morgen Samplemgr,MI_LARA
+Avery,Testperson,Morgen Samplemgr,MI_LARA

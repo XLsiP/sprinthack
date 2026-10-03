@@ -123,3 +123,32 @@ def test_refresh_statuses_ages_with_the_calendar():
             refresh_statuses(db, in_days(days_later))
             db.refresh(credential)
             assert credential.status == expected
+
+
+def test_unverified_when_an_expiring_credential_has_no_date_and_no_check():
+    assert compute_status(None, None, TODAY, expiry_expected=True) == "unverified"
+    assert compute_status(None, "error", TODAY, expiry_expected=True) == "valid"  # callers drop errors first
+    assert compute_status(None, "verified", TODAY, expiry_expected=True) == "valid"
+    assert compute_status(None, "not_found", TODAY, expiry_expected=True) == "verification_failed"
+    assert compute_status(None, "excluded", TODAY, expiry_expected=True) == "excluded"
+    assert compute_status(in_days(400), None, TODAY, expiry_expected=True) == "valid"  # a date on file is enough
+    assert compute_status(None, None, TODAY) == "valid"  # types that never expire are unchanged
+
+
+def test_refresh_credential_marks_roster_style_credentials_unverified():
+    expiring = Credential(credential_type=CredentialType(name="ARRT", renewal_months=12))
+    refresh_credential(expiring, TODAY)
+    assert expiring.status == "unverified"
+
+    expiring.verifications.append(Verification(checked_at=datetime(2025, 12, 1), source="ARRT", result="error"))
+    refresh_credential(expiring, TODAY)
+    assert expiring.status == "unverified"  # an unreachable source is not a verification
+
+    never_expires = Credential(credential_type=CredentialType(name="OIG Exclusion Check", renewal_months=None))
+    refresh_credential(never_expires, TODAY)
+    assert never_expires.status == "valid"
+
+
+def test_unverified_ranks_between_expiring_and_valid():
+    assert worst(["valid", "unverified"]) == "unverified"
+    assert worst(["unverified", "expiring_90"]) == "expiring_90"

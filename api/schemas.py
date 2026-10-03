@@ -6,9 +6,10 @@ from pydantic import BaseModel, ConfigDict
 
 import status as status_rules
 from models import Associate, Credential
+from roster import LOOKUP_URLS
 
 CredentialStatus = Literal[
-    "valid", "expiring_90", "expiring_60", "expiring_30", "expired", "verification_failed", "excluded"
+    "valid", "unverified", "expiring_90", "expiring_60", "expiring_30", "expired", "verification_failed", "excluded"
 ]
 VerificationResultName = Literal["verified", "not_found", "excluded", "mismatch", "error"]
 AlertThreshold = Literal["90", "60", "30", "expired", "excluded"]
@@ -44,6 +45,7 @@ class CredentialOut(BaseModel):
     credential_type: str
     issuing_source: str
     verify_method: str
+    lookup_url: Optional[str]  # where a person checks a hand-verified credential
     number: Optional[str]
     issued_date: Optional[date]
     expires_date: Optional[date]
@@ -62,6 +64,10 @@ class CredentialOut(BaseModel):
             credential_type=c.credential_type.name,
             issuing_source=c.credential_type.issuing_source,
             verify_method=c.credential_type.verify_method,
+            lookup_url=(
+                LOOKUP_URLS.get(c.credential_type.issuing_source)
+                if c.credential_type.verify_method == "manual" else None
+            ),
             number=c.number,
             issued_date=c.issued_date,
             expires_date=c.expires_date,
@@ -109,6 +115,7 @@ class AssociateDetail(AssociateOut):
 class VerifyAllOut(BaseModel):
     checked: int
     by_result: dict[str, int]
+    skipped_manual: int = 0  # credentials that are verified by hand and so were left alone
 
 
 class AlertOut(BaseModel):
@@ -170,3 +177,5 @@ class FiltersOut(BaseModel):
     facilities: list[str]
     departments: list[str]
     managers: list[str]
+    demo_manager: Optional[str]  # the manager with the largest team; the Manager view shows this team
+    demo_team: Optional[str]  # that team's department and facility, for display

@@ -25,6 +25,7 @@ import verify
 from db import SessionLocal
 from models import Credential
 from routers.deps import CREDENTIAL_LOAD
+from status import refresh_credential
 from schemas import AlertRunResult, DailyJobStatusOut, DailyRunOut
 
 log = logging.getLogger(__name__)
@@ -53,6 +54,9 @@ def run_daily_job(trigger: Literal["scheduled", "manual"] = "scheduled") -> Dail
         alerts_skipped: Optional[str] = None
         with SessionLocal() as db:
             for credential in db.scalars(select(Credential).options(*CREDENTIAL_LOAD)):
+                if verify.is_manual(credential):
+                    refresh_credential(credential)  # no lookup, but the status still ages with the calendar
+                    continue
                 results[verify.run(db, credential, delay=False).result] += 1
             db.commit()
 
