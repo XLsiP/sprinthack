@@ -54,7 +54,9 @@ def test_one_credential_per_list_with_nothing_invented(client):
         for c in associate.credentials:
             assert (c.number, c.issued_date, c.expires_date, c.verifications) == (None, None, None, [])
             assert c.status == "unverified"
-            assert c.credential_type.verify_method == "manual"
+            # Michigan's lookup is automated; the other three sources are checked by a person.
+            expected = "api" if c.credential_type.name == "Michigan License" else "manual"
+            assert c.credential_type.verify_method == expected
 
 
 def test_manager_spellings_collapse(client):
@@ -83,23 +85,27 @@ def test_api_shows_unverified_and_the_largest_team(client):
     assert len(client.get("/api/credentials", params={"status": "unverified"}).json()) == 7
 
 
-def test_no_verifier_runs_on_roster_credentials(client, monkeypatch):
+def test_no_verifier_runs_on_hand_verified_credentials(client, monkeypatch):
     monkeypatch.setenv("HR_EMAIL", "hr@example.org")
-    credential_id = next(iter(people().values())).credentials[0].id
+    from verify import michigan_lara
+    monkeypatch.setattr(michigan_lara, "fetch", lambda *a, **kw: (michigan_lara.URL, "Your search returned no results"))
+    credential_id = people()["Blake Testperson"].credentials[0].id
 
     refused = client.post("/api/verify/credential/%d" % credential_id)
     assert refused.status_code == 409 and "verified by hand" in refused.json()["detail"]
 
-    associate_id = people()["Avery Testperson"].id
+    associate_id = people()["Blake Testperson"].id
     assert client.post("/api/verify/associate/%d" % associate_id).json() == []
-    assert client.post("/api/verify/all").json() == {"checked": 0, "by_result": {}, "skipped_manual": 7}
+    # Only the two Michigan licenses are checked automatically; the five hand-verified ones are skipped.
+    assert client.post("/api/verify/all").json() == {"checked": 2, "by_result": {"not_found": 2}, "skipped_manual": 5}
 
     run = scheduler.run_daily_job("manual")
-    assert run.checked == 0 and run.alerts.sent == 0  # nothing verified, and no dates to alert on
+    assert run.checked == 2 and run.alerts.sent == 0  # no dates to alert on
 
     with SessionLocal() as db:
-        assert db.scalars(select(Verification)).all() == []
-        assert set(db.scalars(select(Credential.status))) == {"unverified"}
+        assert {v.source for v in db.scalars(select(Verification))} == {"Michigan LARA"}
+        manual = db.scalars(select(Credential).where(~Credential.credential_type.has(name="Michigan License")))
+        assert {c.status for c in manual} == {"unverified"}
 
 
 def test_bad_rosters_are_rejected(tmp_path):

@@ -66,7 +66,7 @@ class CredentialOut(BaseModel):
             verify_method=c.credential_type.verify_method,
             lookup_url=(
                 LOOKUP_URLS.get(c.credential_type.issuing_source)
-                if c.credential_type.verify_method == "manual" else None
+                if c.credential_type.verify_method in ("manual", "api") else None
             ),
             number=c.number,
             issued_date=c.issued_date,

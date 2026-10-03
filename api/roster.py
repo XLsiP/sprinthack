@@ -2,7 +2,8 @@
 
 A roster has no credential numbers or dates, so nothing is invented: each person gets one credential
 per list they appear on, with no number, no dates and no verification. Those credentials are verified
-by hand at the source (verify_method "manual"), never by the mock verifiers.
+by hand at the source (verify_method "manual"), or by a real integration where one exists (Michigan
+LARA, verify_method "api"). The mock verifiers never run on them.
 
 CSV columns: first_name, last_name, manager, source
 """
@@ -18,6 +19,10 @@ FACILITY = "Beacon Kalamazoo"
 STATE = "MI"
 DEPARTMENT = "Imaging"
 COLUMNS = {"first_name", "last_name", "manager", "source"}
+
+# How each source is verified. Michigan's lookup has no bot protection, so the app checks it itself.
+# ARRT, ARDMS and NMTCB put a CAPTCHA or bot challenge on their search, so a person checks those.
+VERIFY_METHODS = {"MI_LARA": "api"}
 
 # source in the CSV -> credential type, issuing source, the role we assume, renewal period, lookup page.
 # The role is an assumption from which list a person is on; the roster itself has no job titles.
@@ -87,7 +92,9 @@ def load(db: Session, path: Path) -> int:
     rows = read_rows(path)
     managers = canonical_managers([row["manager"] for row in rows])
     types = {
-        key: CredentialType(name=name, issuing_source=source, verify_method="manual", renewal_months=months)
+        key: CredentialType(
+            name=name, issuing_source=source, verify_method=VERIFY_METHODS.get(key, "manual"), renewal_months=months,
+        )
         for key, (name, source, _, months, _) in SOURCES.items()
     }
     db.add_all(types.values())

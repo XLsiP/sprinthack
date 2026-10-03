@@ -13,3 +13,18 @@ os.environ.pop("RENDER", None)
 os.environ.pop("SEED_IF_EMPTY", None)
 for _name in ("RESEND_API_KEY", "ALERT_EMAIL_OVERRIDE_TO", "ALERT_EMAIL_MAX_PER_RUN", "ALERT_EMAIL_FROM", "RESEND_API_URL"):
     os.environ.pop(_name, None)  # tests must never send real email
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def no_live_license_lookups(monkeypatch):
+    """Tests must never query the real Michigan license site; a test that needs results patches `fetch`."""
+    from verify import michigan_lara
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("A test tried to run a live Michigan LARA lookup")
+
+    monkeypatch.setattr(michigan_lara, "fetch", refuse)
+    monkeypatch.setattr(michigan_lara, "MIN_INTERVAL_SECONDS", 0)
