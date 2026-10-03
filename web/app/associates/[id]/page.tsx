@@ -3,26 +3,68 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 
 import { CredentialTable } from "@/components/CredentialTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { api } from "@/lib/api";
+import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
+import { api, type Credential } from "@/lib/api";
+
+function notify({ tone, title, description }: Feedback) {
+  toast[tone](title, { description });
+}
+
+function notifyFailure() {
+  toast.error("Verification did not run", { description: "Could not reach the API. Nothing was changed." });
+}
 
 export default function AssociatePage() {
   const id = Number(useParams<{ id: string }>().id);
   const queryClient = useQueryClient();
   const associate = useQuery({ queryKey: ["associate", id], queryFn: () => api.associate(id) });
-  const verify = useMutation({
-    mutationFn: () => api.verifyAssociate(id),
-    onSuccess: () => queryClient.invalidateQueries(),
+
+  // Refetch before the toast so the badge and "Last verified" have already updated when it appears.
+  const verifyOne = useMutation({
+    mutationFn: (credential: Credential) => api.verifyCredential(credential.id),
+    onSuccess: async (verification, credential) => {
+      await queryClient.invalidateQueries();
+      notify(verificationFeedback(credential.credential_type, verification));
+    },
+    onError: notifyFailure,
   });
+  const verifyAll = useMutation({
+    mutationFn: () => api.verifyAssociate(id),
+    onSuccess: async (verifications) => {
+      await queryClient.invalidateQueries();
+      const names = new Map(associate.data?.credentials.map((c) => [c.id, c.credential_type]));
+      notify(summaryFeedback(verifications, names));
+    },
+    onError: notifyFailure,
+  });
+  const busy = verifyOne.isPending || verifyAll.isPending;
 
   if (associate.error) {
     return <p role="alert" className="text-sm text-red-800">Could not load this associate ({associate.error.message}).</p>;
   }
   if (!associate.data) return <p className="text-sm text-muted-foreground">Loading…</p>;
   const a = associate.data;
+
+  const verifyButton = (credential: Credential) => {
+    const running = verifyAll.isPending || (verifyOne.isPending && verifyOne.variables.id === credential.id);
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        aria-label={`Verify ${credential.credential_type}`}
+        disabled={busy}
+        onClick={() => verifyOne.mutate(credential)}
+      >
+        <RefreshCw className={running ? "animate-spin" : undefined} aria-hidden />
+        {running ? "Verifying…" : "Verify"}
+      </Button>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -33,18 +75,10 @@ export default function AssociatePage() {
             {a.role} · {a.department} · {a.facility} ({a.state}){a.npi && ` · NPI ${a.npi}`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {verify.error && <p role="alert" className="text-sm text-red-800">Verification failed to run.</p>}
-          {verify.data && (
-            <p className="text-sm text-muted-foreground" role="status">
-              {verify.data.filter((v) => v.result === "verified").length} of {verify.data.length} verified
-            </p>
-          )}
-          <Button onClick={() => verify.mutate()} disabled={verify.isPending}>
-            <RefreshCw className={verify.isPending ? "animate-spin" : undefined} aria-hidden />
-            {verify.isPending ? "Verifying…" : "Verify now"}
-          </Button>
-        </div>
+        <Button onClick={() => verifyAll.mutate()} disabled={busy || a.credentials.length === 0}>
+          <RefreshCw className={verifyAll.isPending ? "animate-spin" : undefined} aria-hidden />
+          {verifyAll.isPending ? "Verifying…" : "Verify now"}
+        </Button>
       </div>
       <Card>
         <CardHeader>
@@ -52,7 +86,7 @@ export default function AssociatePage() {
           <CardDescription>Reports to {a.manager_email}</CardDescription>
         </CardHeader>
         <CardContent>
-          <CredentialTable credentials={a.credentials} showAssociate={false} />
+          <CredentialTable credentials={a.credentials} showAssociate={false} action={verifyButton} />
         </CardContent>
       </Card>
     </div>
