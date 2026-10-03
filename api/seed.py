@@ -94,6 +94,18 @@ def days_until_expiry(rng: random.Random) -> int:
     return rng.randint(low, high)
 
 
+def within_renewal(days: int, renewal_months: int) -> int:
+    """Keep an expiry inside one renewal period from today, so the issue date is never in the future.
+
+    A draw that is too far out is folded back into the valid range (91 days up to the period) instead
+    of being redrawn, which leaves the random sequence, and so the rest of the data, unchanged.
+    """
+    longest = renewal_months * 30 - 1
+    if days <= longest:
+        return days
+    return 91 + (days - 91) % (longest - 90)
+
+
 def seed(reset: bool, today: Optional[date] = None) -> int:
     rng = random.Random(42)
     today = today or date.today()
@@ -133,6 +145,7 @@ def seed(reset: bool, today: Optional[date] = None) -> int:
                     # `expiry_days` pins the associate's first credential; the rest stay healthy.
                     days = expiry_days if (expiry_days is not None and i == 0) else (
                         rng.randint(120, 700) if expiry_days is not None else days_until_expiry(rng))
+                    days = within_renewal(days, ctype.renewal_months)
                     credential.expires_date = today + timedelta(days=days)
                     credential.issued_date = credential.expires_date - timedelta(days=ctype.renewal_months * 30)
                     credential.number = "%s-%07d" % (prefixes[type_name], rng.randint(0, 9_999_999))
