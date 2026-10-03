@@ -123,6 +123,23 @@ export interface AlertRunResult {
   by_threshold: Partial<Record<AlertThreshold, number>>;
 }
 
+export interface DailyRunResult {
+  trigger: "scheduled" | "manual";
+  started_at: string;
+  finished_at: string;
+  checked: number;
+  by_result: Partial<Record<VerificationResult, number>>;
+  alerts: AlertRunResult | null; // null when the sweep was skipped
+  alerts_skipped: string | null;
+}
+
+export interface DailyJobStatus {
+  enabled: boolean;
+  next_run_at: string | null;
+  running: boolean;
+  last_run: DailyRunResult | null;
+}
+
 /** Data from an endpoint that may still be mocked. Show a "MOCK DATA" label when `isMock` is true. */
 export interface MaybeMock<T> {
   data: T;
@@ -208,4 +225,6 @@ export const api = {
   // MOCK: these fall back to lib/mocks.ts on a 404; remove the fallback when backend alerts router merges.
   alerts: () => orMock(() => request<Alert[]>("/alerts"), mockAlerts, "GET /api/alerts"),
   runAlerts: () => orMock(() => request<AlertRunResult>("/alerts/run", undefined, "POST"), mockAlertRun, "POST /api/alerts/run"),
+  dailyJob: () => request<DailyJobStatus>("/jobs/daily"),
+  runDailyJob: () => request<DailyRunResult>("/jobs/daily/run", undefined, "POST"),
 };

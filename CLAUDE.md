@@ -79,6 +79,7 @@ Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`,
 - `POST /verify/credential/{id}` · `POST /verify/associate/{id}` · `POST /verify/all`
 - `GET /evidence/{verification_id}.pdf`
 - `GET /alerts` · `POST /alerts/run` (manual alert sweep for the demo)
+- `GET /jobs/daily` (schedule on/off, next run, last run) · `POST /jobs/daily/run` (run the daily job now; 409 if one is already running)
 - `GET /stats?manager=&department=&facility=` (counts by status, by facility, and a timeline of expirations over the next 90 days in 13 weekly buckets)
 
 Backend generates OpenAPI at `/docs`. Keep `web/lib/api.ts` types in sync with `schemas.py`.
@@ -98,6 +99,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 
 - Thresholds: 90, 60, 30 days before expiry, on expiry, and immediately on an OIG exclusion.
 - Recipients: the associate's manager and HR. Never send the same threshold twice for one credential.
+- The daily job (`api/scheduler.py`) re-verifies every credential, which refreshes each stored status, then runs the alert sweep. It runs at 06:00 Eastern by default; configure with `DAILY_JOB_HOUR`, `DAILY_JOB_MINUTE`, `SCHEDULER_TIMEZONE`, and turn the schedule off with `SCHEDULER_ENABLED=0`. Without `HR_EMAIL` it still re-verifies but skips the sweep.
 - Set `HR_EMAIL` in the API environment for `POST /api/alerts/run`; the endpoint returns a configuration error if it is unset. Alerts are recorded in the outbox, one row per recipient.
 
 ## Design

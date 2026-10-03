@@ -4,12 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import scheduler
 from db import Base, SessionLocal, engine
-grantJeandron/alert-thresholds
-from routers import alerts, associates, credentials, health, stats, verify
-
-from routers import associates, credentials, evidence, health, stats, verify
- main
+from routers import alerts, associates, credentials, evidence, health, jobs, stats, verify
 from status import refresh_statuses
 
 
@@ -18,7 +15,9 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         refresh_statuses(db)
+    scheduler.start()
     yield
+    scheduler.shutdown()
 
 
 app = FastAPI(title="Beacon Credentialing Tracker", lifespan=lifespan)
@@ -30,9 +29,5 @@ app.add_middleware(
     expose_headers=["X-Total-Count"],
 )
 
- grantJeandron/alert-thresholds
-for module in (health, associates, credentials, stats, verify, alerts):
-
-for module in (health, associates, credentials, evidence, stats, verify):
- main
+for module in (health, alerts, associates, credentials, evidence, jobs, stats, verify):
     app.include_router(module.router, prefix="/api")
