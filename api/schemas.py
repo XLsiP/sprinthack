@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 import status as status_rules
 from models import Associate, Credential
@@ -110,6 +110,15 @@ class AssociateDetail(AssociateOut):
     def from_model(cls, a: Associate) -> "AssociateDetail":
         ordered = sorted(a.credentials, key=lambda c: status_rules.SEVERITY.index(c.status))
         return cls(**cls.fields_from(a), credentials=[CredentialOut.from_model(c) for c in ordered])
+
+
+class ManualVerificationIn(BaseModel):
+    """What a person saw when they looked a credential up at its source."""
+    result: Literal["verified", "not_found"]
+    number: Optional[str] = Field(None, max_length=64)
+    expires_date: Optional[date] = None
+    issued_date: Optional[date] = None
+    note: Optional[str] = Field(None, max_length=500)
 
 
 class VerifyAllOut(BaseModel):

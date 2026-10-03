@@ -9,7 +9,7 @@ import verify
 from db import get_db
 from models import Associate, Credential
 from routers.deps import CREDENTIAL_LOAD, filter_associates
-from schemas import VerificationOut, VerifyAllOut
+from schemas import ManualVerificationIn, VerificationOut, VerifyAllOut
 
 router = APIRouter(prefix="/verify", tags=["verify"])
 
@@ -25,6 +25,29 @@ def verify_credential(credential_id: int, db: Session = Depends(get_db)) -> Veri
             % credential.credential_type.issuing_source,
         )
     verification = verify.run(db, credential)
+    db.commit()
+    return VerificationOut.model_validate(verification)
+
+
+@router.post("/credential/{credential_id}/manual", response_model=VerificationOut)
+def record_manual_verification(
+    credential_id: int, body: ManualVerificationIn, db: Session = Depends(get_db)
+) -> VerificationOut:
+    """Record the result of a lookup a person did at the source (sources the app cannot check itself)."""
+    credential = db.scalar(select(Credential).where(Credential.id == credential_id).options(*CREDENTIAL_LOAD))
+    if credential is None:
+        raise HTTPException(404, "Credential not found")
+    ctype = credential.credential_type
+    if ctype.verify_method == "mock":
+        raise HTTPException(409, "This credential is checked automatically; results cannot be entered by hand")
+    if body.result == "verified" and ctype.renewal_months and not (body.expires_date or credential.expires_date):
+        raise HTTPException(422, "expires_date: an expiry date is required for a credential that expires")
+    if body.expires_date and body.issued_date and body.issued_date > body.expires_date:
+        raise HTTPException(422, "issued_date: must not be after expires_date")
+    verification = verify.record_manual(
+        db, credential, body.result, number=body.number, expires_date=body.expires_date,
+        issued_date=body.issued_date, note=body.note,
+    )
     db.commit()
     return VerificationOut.model_validate(verification)
 

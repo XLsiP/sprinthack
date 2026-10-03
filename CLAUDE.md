@@ -77,6 +77,7 @@ Derived credential status: `valid`, `unverified`, `expiring_90`, `expiring_60`, 
 - `GET /associates/{id}` (with credentials + latest verifications)
 - `GET /credentials?status=&expires_before=&manager=&department=&facility=&limit=&offset=` (most urgent first; `status` repeatable; `expires_before` exclusive; total matches in the `X-Total-Count` header)
 - `POST /verify/credential/{id}` · `POST /verify/associate/{id}` · `POST /verify/all`
+- `POST /verify/credential/{id}/manual` (record a lookup a person did at the source: `result` `verified` or `not_found`, plus `number`, `expires_date`, `note`; the `/verify` page in the web app is the queue for these)
 - `GET /evidence/{verification_id}.pdf`
 - `GET /alerts` · `POST /alerts/run` (manual alert sweep for the demo)
 - `GET /jobs/daily` (schedule on/off, next run, last run) · `POST /jobs/daily/run` (run the daily job now; 409 if one is already running)
