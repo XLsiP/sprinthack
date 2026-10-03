@@ -73,7 +73,7 @@ Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`,
 ## API (FastAPI, prefix `/api`)
 
 - `GET /health` (liveness check, returns `{"status": "ok"}`)
-- `GET /associates?manager=&department=&facility=&status=`
+- `GET /associates?manager=&department=&facility=&status=&sort=&limit=&offset=` (`status` repeatable; `sort` is `urgency` (default) or `name`; total matches in the `X-Total-Count` header)
 - `GET /associates/{id}` (with credentials + latest verifications)
 - `GET /credentials?status=&expires_before=`
 - `POST /verify/credential/{id}` · `POST /verify/associate/{id}` · `POST /verify/all`
