@@ -33,6 +33,8 @@ export function ChartCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="h-64">{body}</div>
+        {/* Reserve the footer row while loading so the card doesn't grow when data arrives. */}
+        {isLoading && !error && <Skeleton className="h-4 w-48" />}
         {!error && !isLoading && !empty && footer}
       </CardContent>
     </Card>
