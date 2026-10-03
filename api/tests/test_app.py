@@ -36,6 +36,12 @@ def add_associate(expires_in_days, type_name="ARRT Certification", source="ARRT"
         return associate.id, credential.id
 
 
+def test_health(client):
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_status_buckets():
     today = date(2026, 1, 1)
     assert derive_status(date(2025, 12, 31), "verified", today) == "expired"

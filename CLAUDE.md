@@ -70,6 +70,7 @@ Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`,
 
 ## API (FastAPI, prefix `/api`)
 
+- `GET /health` (liveness check, returns `{"status": "ok"}`)
 - `GET /associates?manager=&department=&facility=&status=`
 - `GET /associates/{id}` (with credentials + latest verifications)
 - `GET /credentials?status=&expires_before=`
