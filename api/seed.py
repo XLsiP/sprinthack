@@ -18,22 +18,23 @@ from verify.nppes import npi_checksum_ok
 
 TOTAL_ASSOCIATES = 1500
 RADIOLOGY_TEAM = 60
-DEMO_FACILITY = "Memorial Hospital"
+DEMO_FACILITY = "Memorial Hospital of South Bend"
 DEMO_MANAGER = "radiology.manager@example.org"
 
-# Placeholder facility list (name, state); confirm the real 11 with Beacon before the demo.
+# Beacon's 11 hospitals (name, state), from the system's public fact sheet.
 FACILITIES = [
-    ("Memorial Hospital", "IN"), ("Elkhart General Hospital", "IN"), ("Community Hospital of Bremen", "IN"),
-    ("Beacon Granger Hospital", "IN"), ("Beacon Children's Hospital", "IN"), ("Three Rivers Health", "MI"),
-    ("Beacon Kalamazoo", "MI"), ("Beacon Allegan", "MI"), ("Beacon Dowagiac", "MI"),
-    ("Beacon Plainwell", "MI"), ("Beacon Battle Creek", "MI"),
+    ("Memorial Hospital of South Bend", "IN"), ("Beacon Children's Hospital", "IN"), ("Epworth Hospital", "IN"),
+    ("Elkhart General Hospital", "IN"), ("Community Hospital of Bremen", "IN"), ("Beacon Granger Hospital", "IN"),
+    ("Three Rivers Hospital", "MI"), ("Beacon Kalamazoo", "MI"), ("Beacon Allegan", "MI"),
+    ("Beacon Plainwell", "MI"), ("Beacon Dowagiac", "MI"),
 ]
 
 # name, issuing_source (must match a verifier's `source`), verify_method, renewal_months, number prefix
 TYPES = [
     ("Indiana State License", "Indiana PLA", "mock", 24, "IN"),
     ("Michigan State License", "Michigan LARA", "mock", 24, "MI"),
-    ("ARRT Certification", "ARRT", "mock", 12, "ARRT"),
+    ("ARRT RT(R)", "ARRT", "mock", 12, "RTR"),
+    ("ARRT CT", "ARRT", "mock", 12, "CT"),
     ("NMTCB Certification", "NMTCB", "mock", 12, "NMT"),
     ("BLS", "American Heart Association", "mock", 24, "BLS"),
     ("NPI Registration", "NPPES", "api", None, ""),
@@ -43,9 +44,9 @@ STATE_LICENSE = {"IN": "Indiana State License", "MI": "Michigan State License"}
 
 # Requirements besides the state license (which follows the associate's work state).
 ROLES = {
-    "Radiologic Technologist": ["ARRT Certification", "BLS", "OIG Exclusion Check"],
-    "CT Technologist": ["ARRT Certification", "BLS", "OIG Exclusion Check"],
-    "MRI Technologist": ["ARRT Certification", "BLS", "OIG Exclusion Check"],
+    "Radiologic Technologist": ["ARRT RT(R)", "BLS", "OIG Exclusion Check"],
+    "CT Technologist": ["ARRT RT(R)", "ARRT CT", "BLS", "OIG Exclusion Check"],
+    "MRI Technologist": ["ARRT RT(R)", "BLS", "OIG Exclusion Check"],
     "Nuclear Medicine Technologist": ["NMTCB Certification", "BLS", "OIG Exclusion Check"],
     "Radiologist": ["NPI Registration", "BLS", "OIG Exclusion Check"],
     "Registered Nurse": ["BLS", "OIG Exclusion Check"],
@@ -164,8 +165,16 @@ def seed(reset: bool, today: Optional[date] = None) -> int:
             result="excluded", details={"mock": True, "seeded": True, "exclusion_type": "1128(a)(1)"},
         )]
 
-        for _ in range(TOTAL_ASSOCIATES - RADIOLOGY_TEAM):
-            facility, state = rng.choice(FACILITIES)
+        # One radiologist whose NPI record is under a different name (the team roles end with the radiologists).
+        npi_credential = next(c for c in team[-1].credentials if c.credential_type.name == "NPI Registration")
+        npi_credential.verifications.append(Verification(
+            checked_at=datetime.combine(today - timedelta(days=9), datetime.min.time()), source="NPPES",
+            result="mismatch",
+            details={"seeded": True, "npi": team[-1].npi, "reason": "Registry name does not match the name on file"},
+        ))
+
+        for i in range(TOTAL_ASSOCIATES - RADIOLOGY_TEAM):
+            facility, state = FACILITIES[i % len(FACILITIES)]  # round-robin so every facility is staffed
             department = rng.choice(list(DEPARTMENTS))
             if facility == DEMO_FACILITY and department == "Radiology":
                 department = "Emergency"  # keep the demo team at exactly 60
