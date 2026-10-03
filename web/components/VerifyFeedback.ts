@@ -37,7 +37,7 @@ export function verificationFeedback(credential: string, verification: Verificat
       return {
         tone: "warning",
         title: `${credential}: could not check`,
-        description: `Could not reach ${source}. Status is unchanged.`,
+        description: reason(verification) ?? `Could not reach ${source}. Status is unchanged.`,
       };
   }
 }
