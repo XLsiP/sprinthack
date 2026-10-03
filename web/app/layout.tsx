@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
+import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Providers>
           <Header />
           <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+          <Toaster theme="light" position="bottom-right" richColors />
         </Providers>
       </body>
     </html>
