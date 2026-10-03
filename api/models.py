@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import JSON, ForeignKey, String
+from sqlalchemy import JSON, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db import Base
@@ -12,6 +12,9 @@ from db import Base
 
 class Associate(Base):
     __tablename__ = "associates"
+    __table_args__ = (
+        Index("ix_associates_manager_department_facility", "manager_email", "department", "facility"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, index=True)
@@ -44,6 +47,9 @@ class RoleRequirement(Base):
 
 class Credential(Base):
     __tablename__ = "credentials"
+    __table_args__ = (
+        Index("ix_credentials_status_expires_date", "status", "expires_date"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     associate_id: Mapped[int] = mapped_column(ForeignKey("associates.id"), index=True)

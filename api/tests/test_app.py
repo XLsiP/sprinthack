@@ -42,6 +42,27 @@ def test_health(client):
     assert response.json() == {"status": "ok"}
 
 
+def test_api_errors_use_detail_string(client):
+    not_found = client.get("/api/associates/999")
+    invalid = client.get("/api/associates", params={"limit": 0})
+
+    assert not_found.status_code == 404
+    assert not_found.json() == {"detail": "Associate not found"}
+    assert invalid.status_code == 422
+    assert isinstance(invalid.json()["detail"], str)
+    assert "query.limit" in invalid.json()["detail"]
+
+
+@pytest.mark.parametrize("path", ["/api/associates", "/api/credentials", "/api/stats"])
+@pytest.mark.parametrize("value", ["", "x" * 201])
+def test_scope_parameters_are_validated(client, path, value):
+    response = client.get(path, params={"manager": value})
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], str)
+    assert "query.manager" in response.json()["detail"]
+
+
 def test_match_license():
     provider = {"basic": {"status": "A"}, "taxonomies": [{"license": "RN-123456", "state": "CA"}]}
     assert nppes.match_license(provider, "rn123456", "CA")
