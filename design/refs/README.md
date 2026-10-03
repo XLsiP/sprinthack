@@ -14,12 +14,11 @@ One row per screenshot. Under "Borrow", use one or more of: `layout`, `table`, `
 
 | # | File | Source (URL) | Borrow | Notes |
 | --- | --- | --- | --- | --- |
-| 1 | `01-TODO.png` | TODO | TODO | TODO |
-| 2 | `02-TODO.png` | TODO | TODO | TODO |
-| 3 | `03-TODO.png` | TODO | TODO | TODO |
-| 4 | `04-TODO.png` | TODO | TODO | TODO |
-| 5 | `05-TODO.png` | TODO | TODO | TODO |
-| 6 | `06-TODO.png` | TODO | TODO | TODO |
+| 1 | [`01-tasks-data-table.png`](01-tasks-data-table.png) | https://ui.shadcn.com/examples/tasks | table | Dense credentials table: row checkboxes for bulk "Verify", sortable headers, icon + label status, and a `…` row menu. |
+| 2 | [`02-dashboard-kpis-chart.png`](02-dashboard-kpis-chart.png) | https://ui.shadcn.com/examples/dashboard | layout, chart | Dashboard top: KPI cards with a small trend pill and one-line caption, then a full-width chart with a "3 months / 30 days / 7 days" range toggle. |
+| 3 | [`03-kanban-lanes.png`](03-kanban-lanes.png) | https://example.crm.refine.dev/scrumboard/sales | layout | Lane per urgency bucket (Expired / ≤30 / ≤90 / Valid) with a count under each heading, as an alternative "board" view of the urgent list. |
+| 4 | [`04-split-view.png`](04-split-view.png) | https://www.cultofmac.com/split-view | layout | List-plus-detail split: associates or credentials on the left, profile or evidence on the right, so managers can step through people without losing their place. |
+| 5 | [`05-stores-table.png`](05-stores-table.png) | https://example.mui.admin.refine.dev/stores?pageSize=10&current=1 | table, colors | Outlined status pills with an icon (gray "Closed" / green "Open") map to our status badges; also the eye "view" action and the "Rows per page · 1–10 of 20" footer. |
 
 ### Adding a screenshot
 
