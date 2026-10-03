@@ -11,6 +11,7 @@ import { useScope } from "@/components/ScopeFilters";
 import { StatusBreakdownChart } from "@/components/StatusBreakdownChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api, type CredentialStatus, type Stats } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const URGENT: CredentialStatus[] = [
 ];
 
 const PAGE_SIZE = 25;
+const TILE_COUNT = 7;
 
 /** Urgency buckets shown as tiles. A bucket with `statuses` filters the associates table when clicked. */
 interface Tile {
@@ -50,12 +52,18 @@ function TileCard({ tile, selected, onSelect }: { tile: Tile; selected: boolean;
   const body = (
     <Card className={cn("h-full border-l-4", tile.accent, selected && "ring-2 ring-ring")}>
       <CardContent>
-        <div className="text-2xl font-semibold tabular-nums">{tile.value.toLocaleString()}</div>
+        <div className="text-3xl font-semibold tracking-tight tabular-nums">{tile.value.toLocaleString()}</div>
         <div className="text-xs text-muted-foreground">{tile.label}</div>
       </CardContent>
     </Card>
   );
-  if (!onSelect) return body;
+  if (!onSelect) {
+    return (
+      <div className="h-full cursor-default" title="Not filterable">
+        {body}
+      </div>
+    );
+  }
   return (
     <button
       type="button"
@@ -66,6 +74,35 @@ function TileCard({ tile, selected, onSelect }: { tile: Tile; selected: boolean;
     >
       {body}
     </button>
+  );
+}
+
+/** Placeholder at the same height as a loaded tile. */
+function TileSkeleton() {
+  return (
+    <Card className="h-full border-l-4 border-l-muted" aria-hidden>
+      <CardContent className="space-y-2">
+        <Skeleton className="h-9 w-16" />
+        <Skeleton className="h-3 w-20" />
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Loading, empty and error text inside a dashboard card, styled the same everywhere. */
+function SectionMessage({ children, className, role }: { children: React.ReactNode; className?: string; role?: "status" }) {
+  return (
+    <p role={role} className={cn("py-8 text-center text-sm text-muted-foreground", className)}>
+      {children}
+    </p>
+  );
+}
+
+function ErrorBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      {children}
+    </p>
   );
 }
 
@@ -95,7 +132,7 @@ export default function Dashboard() {
     mutationFn: () => api.verifyAll(scope),
     onSuccess: () => queryClient.invalidateQueries(),
   });
-  const error = stats.error ?? urgent.error ?? associates.error ?? verifyAll.error;
+  const error = stats.error ?? urgent.error ?? associates.error;
   const urgentTotal = stats.data ? URGENT.reduce((n, s) => n + stats.data.by_status[s], 0) : 0;
   const total = associates.data?.total ?? 0;
 
@@ -103,7 +140,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           {filters}
         </div>
         <div className="flex items-center gap-3">
@@ -120,12 +157,13 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          Could not reach the API ({error.message}). Is the backend running on port 8000?
-        </p>
+        <ErrorBanner>Could not reach the API ({error.message}). Is the backend running on port 8000?</ErrorBanner>
       )}
+      {verifyAll.error && <ErrorBanner>Verify all failed ({verifyAll.error.message}).</ErrorBanner>}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+        {stats.isLoading && Array.from({ length: TILE_COUNT }, (_, i) => <TileSkeleton key={i} />)}
+        {stats.error && <SectionMessage className="col-span-full py-4">Couldn&apos;t load counts.</SectionMessage>}
         {stats.data &&
           tiles(stats.data).map((tile) => {
             const selected = bucket?.label === tile.label;
@@ -149,6 +187,7 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle>Needs attention</CardTitle>
           <CardDescription>
+            {stats.isLoading && <Skeleton className="h-5 w-72 max-w-full" />}
             {stats.data &&
               `${stats.data.associates.toLocaleString()} associates · ${urgentTotal.toLocaleString()} credentials need attention` +
                 (urgentTotal > 50 ? ", showing the 50 most urgent" : "")}
@@ -157,12 +196,14 @@ export default function Dashboard() {
         <CardContent>
           {urgent.data ? (
             urgent.data.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Nothing needs attention 🎉</p>
+              <SectionMessage>Nothing needs attention 🎉</SectionMessage>
             ) : (
               <CredentialTable credentials={urgent.data} />
             )
+          ) : urgent.error ? (
+            <SectionMessage>Couldn&apos;t load credentials.</SectionMessage>
           ) : (
-            !error && <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            <SectionMessage role="status">Loading…</SectionMessage>
           )}
         </CardContent>
       </Card>
@@ -186,7 +227,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           {associates.data ? (
-            <div className={cn(associates.isPlaceholderData && "opacity-60")}>
+            <div className={cn(associates.isPlaceholderData && "opacity-60")} aria-busy={associates.isFetching}>
               <AssociateTable associates={associates.data.items} sort={sort} onSortChange={setSort} />
               {total > 0 && (
                 <div className="flex items-center justify-end gap-3 pt-3 text-sm text-muted-foreground">
@@ -208,8 +249,10 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+          ) : associates.error ? (
+            <SectionMessage>Couldn&apos;t load associates.</SectionMessage>
           ) : (
-            !error && <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            <SectionMessage role="status">Loading…</SectionMessage>
           )}
         </CardContent>
       </Card>
