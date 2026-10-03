@@ -63,6 +63,7 @@ Save; Render redeploys. Until `CORS_ORIGINS` is set, the site loads but every da
 | `RESEND_API_KEY` | no | Turns on real alert email. Without it, alerts stay in the outbox. |
 | `ALERT_EMAIL_OVERRIDE_TO` | no | Send every alert email to this one inbox. Needed for a real send, because seed addresses are `@example.org`. |
 | `SEED_IF_EMPTY` | no | `1` seeds an empty database at startup. Automatic on Render. |
+| `ROSTER_FILE` | no | Path to a staff roster CSV to load instead of synthetic data when the database is empty. Set `ACCESS_PASSWORD` too. |
 | `SCHEDULER_ENABLED` | no | `0` turns off the 06:00 daily job. |
 | `MOCK_DELAY_MS` | no | Simulated lookup delay for mocked sources. |
 | `DATABASE_URL` | no | Use Postgres instead of the built-in SQLite file. |

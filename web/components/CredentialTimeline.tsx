@@ -77,7 +77,9 @@ export function CredentialTimeline({ credentials }: { credentials: Credential[] 
         const right = c.expires_date ? percent(ms(c.expires_date)) : 100;
         const summary = c.expires_date
           ? `${c.issued_date ?? "issue date unknown"} to ${c.expires_date}`
-          : "does not expire";
+          : c.status === "unverified"
+            ? "dates not on file"
+            : "does not expire";
         return (
           <div key={c.id} className="contents">
             <div className="flex flex-col justify-center pt-2 sm:py-1.5">

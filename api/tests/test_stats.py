@@ -59,7 +59,7 @@ def test_counts_by_status_and_facility(client):
     assert stats["unverified"] == 2
     assert stats["by_status"] == {
         "excluded": 1, "expired": 1, "verification_failed": 2, "expiring_30": 1, "expiring_60": 0,
-        "expiring_90": 0, "valid": 1,
+        "expiring_90": 0, "unverified": 0, "valid": 1,
     }
     assert sum(stats["by_status"].values()) == stats["credentials"]
 

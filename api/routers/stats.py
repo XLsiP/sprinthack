@@ -70,8 +70,21 @@ def filters(db: Session = Depends(get_db)) -> FiltersOut:
     def distinct(column) -> list[str]:
         return list(db.scalars(select(column).distinct().order_by(column)))
 
+    # The demo "Manager" view is the largest team, which is the radiology team in seed data.
+    largest = db.execute(
+        select(Associate.manager_email, func.count()).group_by(Associate.manager_email)
+        .order_by(func.count().desc(), Associate.manager_email).limit(1)
+    ).first()
+    demo_manager = largest[0] if largest else None
+    team = db.execute(
+        select(Associate.department, Associate.facility).where(Associate.manager_email == demo_manager)
+        .group_by(Associate.department, Associate.facility).order_by(func.count().desc()).limit(1)
+    ).first() if demo_manager else None
+
     return FiltersOut(
         facilities=distinct(Associate.facility),
         departments=distinct(Associate.department),
         managers=distinct(Associate.manager_email),
+        demo_manager=demo_manager,
+        demo_team="%s, %s" % (team[0], team[1]) if team else None,
     )
