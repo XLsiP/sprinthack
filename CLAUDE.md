@@ -98,6 +98,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 
 - Thresholds: 90, 60, 30 days before expiry, on expiry, and immediately on an OIG exclusion.
 - Recipients: the associate's manager and HR. Never send the same threshold twice for one credential.
+- Set `HR_EMAIL` in the API environment for `POST /api/alerts/run`; the endpoint returns a configuration error if it is unset. Alerts are recorded in the outbox, one row per recipient.
 
 ## Design
 
