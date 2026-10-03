@@ -1,7 +1,7 @@
 import { Ban, CircleAlert, CircleCheck, CircleHelp, Clock, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { CredentialStatus, VerificationResult } from "@/lib/api";
+import type { AlertThreshold, CredentialStatus, VerificationResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // Status colors used everywhere: red = expired/excluded, orange = within 30 days,
@@ -69,6 +69,25 @@ export function MockBadge() {
 /** For an associate who holds no credentials yet. */
 export function NoCredentialsBadge() {
   return <Badge className={TONES.gray}>No credentials</Badge>;
+}
+
+export const THRESHOLD: Record<AlertThreshold, { label: string; tone: keyof typeof TONES; icon: LucideIcon }> = {
+  excluded: { label: "OIG exclusion", tone: "red", icon: Ban },
+  expired: { label: "Expired", tone: "red", icon: CircleAlert },
+  "30": { label: "30 days", tone: "orange", icon: Clock },
+  "60": { label: "60 days", tone: "yellow", icon: Clock },
+  "90": { label: "90 days", tone: "yellow", icon: Clock },
+};
+
+/** Which alert threshold fired, in the same colors as `StatusBadge`. */
+export function ThresholdBadge({ threshold }: { threshold: AlertThreshold }) {
+  const { label, tone, icon: Icon } = THRESHOLD[threshold];
+  return (
+    <Badge className={TONES[tone]}>
+      <Icon aria-hidden />
+      {label}
+    </Badge>
+  );
 }
 
 const RESULT: Record<VerificationResult, { label: string; tone: keyof typeof TONES; icon: LucideIcon }> = {
