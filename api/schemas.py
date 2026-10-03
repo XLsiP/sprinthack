@@ -11,6 +11,7 @@ CredentialStatus = Literal[
     "valid", "expiring_90", "expiring_60", "expiring_30", "expired", "verification_failed", "excluded"
 ]
 VerificationResultName = Literal["verified", "not_found", "excluded", "mismatch", "error"]
+AlertThreshold = Literal["90", "60", "30", "expired", "excluded"]
 
 
 class HealthOut(BaseModel):
@@ -103,6 +104,22 @@ class AssociateDetail(AssociateOut):
 class VerifyAllOut(BaseModel):
     checked: int
     by_result: dict[str, int]
+
+
+class AlertOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    credential_id: int
+    threshold: AlertThreshold
+    sent_to: str
+    sent_at: datetime
+    channel: str
+
+
+class AlertRunResult(BaseModel):
+    sent: int
+    by_threshold: dict[AlertThreshold, int]
 
 
 class FacilityStats(BaseModel):
