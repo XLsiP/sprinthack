@@ -14,6 +14,15 @@ const TONES = {
   gray: "bg-gray-100 text-gray-700",
 } as const;
 
+// Solid versions of the same colors, for chart bars.
+const BAR_TONES = {
+  red: "bg-red-500",
+  orange: "bg-orange-500",
+  yellow: "bg-yellow-400",
+  green: "bg-green-500",
+  gray: "bg-gray-400",
+} as const;
+
 export const STATUS: Record<CredentialStatus, { label: string; tone: keyof typeof TONES; icon: LucideIcon }> = {
   excluded: { label: "Excluded", tone: "red", icon: Ban },
   expired: { label: "Expired", tone: "red", icon: CircleAlert },
@@ -39,6 +48,20 @@ export function UnverifiedBadge() {
     <Badge className={TONES.gray}>
       <CircleHelp aria-hidden />
       Not yet verified
+    </Badge>
+  );
+}
+
+/** Solid bar color for a status, matching its badge. */
+export function statusBarClass(status: CredentialStatus): string {
+  return BAR_TONES[STATUS[status].tone];
+}
+
+/** Marks a source whose lookup is simulated rather than a real integration. */
+export function MockBadge() {
+  return (
+    <Badge variant="outline" className="h-4 px-1 text-[10px] text-muted-foreground" title="Simulated lookup, not a real check">
+      MOCK
     </Badge>
   );
 }
