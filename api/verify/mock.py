@@ -1,7 +1,7 @@
 """MOCK verification shared by the sources that have no real integration yet.
 
-Outcomes are deterministic per credential number, so the seed data and repeated
-"Verify now" clicks agree. Each subclass is a drop-in slot for a real adapter.
+Seeded mock outcomes are reused; otherwise outcomes are deterministic per
+credential number so repeated "Verify now" clicks agree.
 """
 import hashlib
 import os
@@ -27,15 +27,35 @@ def mock_outcome(number: str) -> str:
     return "not_found" if digest[0] % 40 == 0 else "verified"
 
 
+def seeded_outcome(credential: Credential) -> str | None:
+    """Return a valid seeded mock result for this credential, if one exists."""
+    for verification in reversed(credential.verifications):
+        if (
+            verification.details.get("mock") is True
+            and verification.details.get("seeded") is True
+            and verification.result in {"verified", "not_found"}
+        ):
+            return verification.result
+    return None
+
+
 class MockVerifier:
     source = "Mock"
 
     def verify(self, associate: Associate, credential: Credential) -> VerificationResult:
         pause()
-        details: dict = {"mock": True, "searched_name": associate.name, "searched_number": credential.number}
+        details: dict = {
+            "mock": True,
+            "searched_name": associate.name,
+            "searched_number": credential.number,
+        }
         if not credential.number:
             return VerificationResult("not_found", self.source, {**details, "reason": "No number on file"})
-        result = mock_outcome(credential.number)
+
+        result = seeded_outcome(credential)
+        details["outcome_source"] = "seed" if result is not None else "deterministic_mock"
+        if result is None:
+            result = mock_outcome(credential.number)
         if result == "verified":
             details["source_status"] = "Active"
             details["source_expires"] = credential.expires_date.isoformat() if credential.expires_date else None
