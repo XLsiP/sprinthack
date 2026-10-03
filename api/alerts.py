@@ -1,4 +1,4 @@
-"""Threshold selection and outbox creation for credential alerts."""
+"""Threshold selection, outbox creation and email delivery for credential alerts."""
 from collections import Counter
 from datetime import date, datetime
 from typing import Optional, TypedDict
@@ -6,6 +6,7 @@ from typing import Optional, TypedDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+import mailer
 from models import Alert, Credential
 from status import days_left, refresh_credential
 
@@ -13,6 +14,7 @@ from status import days_left, refresh_credential
 class AlertRunSummary(TypedDict):
     sent: int
     by_threshold: dict[str, int]
+    by_channel: dict[str, int]
 
 
 def threshold_for_credential(credential: Credential, today: Optional[date] = None) -> Optional[str]:
@@ -38,6 +40,7 @@ def run_alerts(db: Session, hr_email: str, today: Optional[date] = None) -> Aler
     credentials = db.scalars(
         select(Credential).options(
             selectinload(Credential.associate),
+            selectinload(Credential.credential_type),
             selectinload(Credential.verifications),
         )
     ).all()
@@ -47,6 +50,7 @@ def run_alerts(db: Session, hr_email: str, today: Optional[date] = None) -> Aler
     }
 
     by_threshold: Counter[str] = Counter()
+    created: list[mailer.Item] = []
     sent_at = datetime.now()
     for credential in credentials:
         threshold = threshold_for_credential(credential, today)
@@ -55,17 +59,19 @@ def run_alerts(db: Session, hr_email: str, today: Optional[date] = None) -> Aler
 
         recipients = dict.fromkeys((credential.associate.manager_email, hr_email))
         for recipient in recipients:
-            db.add(
-                Alert(
-                    credential_id=credential.id,
-                    threshold=threshold,
-                    sent_to=recipient,
-                    sent_at=sent_at,
-                    channel="outbox",
-                )
+            alert = Alert(
+                credential_id=credential.id,
+                threshold=threshold,
+                sent_to=recipient,
+                sent_at=sent_at,
+                channel="outbox",
             )
+            db.add(alert)
+            created.append((alert, credential))
             by_threshold[threshold] += 1
         existing.add((credential.id, threshold))
 
+    # Rows start in the outbox; delivery flips the ones that were emailed.
+    by_channel = mailer.deliver(created, hr_email)
     db.flush()
-    return {"sent": sum(by_threshold.values()), "by_threshold": dict(by_threshold)}
+    return {"sent": sum(by_threshold.values()), "by_threshold": dict(by_threshold), "by_channel": by_channel}

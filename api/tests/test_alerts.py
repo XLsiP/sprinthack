@@ -71,6 +71,7 @@ def test_run_queues_each_due_threshold_for_manager_and_hr(client, monkeypatch):
     assert response.json() == {
         "sent": 12,
         "by_threshold": {"90": 2, "60": 2, "30": 2, "expired": 4, "excluded": 2},
+        "by_channel": {"email": 0, "outbox": 12},
     }
     alerts_response = client.get("/api/alerts")
     assert alerts_response.status_code == 200
@@ -89,7 +90,7 @@ def test_run_does_not_backfill_missed_thresholds_or_alert_non_expiring_credentia
     response = client.post("/api/alerts/run")
 
     assert response.status_code == 200
-    assert response.json() == {"sent": 2, "by_threshold": {"30": 2}}
+    assert response.json() == {"sent": 2, "by_threshold": {"30": 2}, "by_channel": {"email": 0, "outbox": 2}}
     with SessionLocal() as db:
         assert set(db.scalars(select(Alert.threshold))) == {"30"}
 
@@ -101,8 +102,8 @@ def test_run_is_idempotent_per_credential_and_threshold(client, monkeypatch):
     first = client.post("/api/alerts/run")
     second = client.post("/api/alerts/run")
 
-    assert first.json() == {"sent": 2, "by_threshold": {"30": 2}}
-    assert second.json() == {"sent": 0, "by_threshold": {}}
+    assert first.json() == {"sent": 2, "by_threshold": {"30": 2}, "by_channel": {"email": 0, "outbox": 2}}
+    assert second.json() == {"sent": 0, "by_threshold": {}, "by_channel": {"email": 0, "outbox": 0}}
     with SessionLocal() as db:
         assert len(db.scalars(select(Alert)).all()) == 2
 
