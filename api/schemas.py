@@ -18,6 +18,11 @@ class HealthOut(BaseModel):
     status: Literal["ok"]
 
 
+class AccessOut(BaseModel):
+    required: bool
+    granted: bool
+
+
 class VerificationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

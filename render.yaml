@@ -19,6 +19,9 @@ services:
         value: hr@example.org
       - key: MOCK_DELAY_MS
         value: "400"
+      # Shared password for the site; enter it in the dashboard.
+      - key: ACCESS_PASSWORD
+        sync: false
       # Optional: real email. Enter these in the dashboard; never commit them.
       - key: RESEND_API_KEY
         sync: false

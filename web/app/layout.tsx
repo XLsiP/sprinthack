@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { AccessGate } from "@/components/AccessGate";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -30,8 +31,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col bg-muted/40">
         <Providers>
-          <Header />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+          <AccessGate>
+            <Header />
+            <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+          </AccessGate>
           <Toaster theme="light" position="bottom-right" richColors />
         </Providers>
       </body>
