@@ -13,6 +13,10 @@ CredentialStatus = Literal[
 VerificationResultName = Literal["verified", "not_found", "excluded", "mismatch", "error"]
 
 
+class HealthOut(BaseModel):
+    status: Literal["ok"]
+
+
 class VerificationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
