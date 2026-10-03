@@ -65,3 +65,8 @@ export function MockBadge() {
     </Badge>
   );
 }
+
+/** For an associate who holds no credentials yet. */
+export function NoCredentialsBadge() {
+  return <Badge className={TONES.gray}>No credentials</Badge>;
+}
