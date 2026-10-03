@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -8,15 +9,31 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import scheduler
+import seed
 from db import Base, SessionLocal, engine, ensure_indexes
 from routers import alerts, associates, credentials, evidence, health, jobs, stats, verify
 from status import refresh_statuses
+
+
+log = logging.getLogger("uvicorn.error")
+
+
+def seed_on_start() -> bool:
+    """Seed an empty database at startup on Render (which sets RENDER) or when SEED_IF_EMPTY is set.
+
+    Render's free tier has no persistent disk, so the data has to come back on every start, whatever
+    start command the service was created with.
+    """
+    return bool(os.environ.get("RENDER")) or os.environ.get("SEED_IF_EMPTY", "").strip().lower() in ("1", "true", "yes")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
     ensure_indexes()
+    if seed_on_start():
+        seeded = seed.seed(reset=False, if_empty=True)
+        log.info("Seeded %d associates into an empty database" % seeded if seeded else "Database already has data")
     with SessionLocal() as db:
         refresh_statuses(db)
     scheduler.start()

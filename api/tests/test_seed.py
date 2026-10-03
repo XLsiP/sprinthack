@@ -2,11 +2,13 @@ from collections import Counter
 from datetime import date, timedelta
 
 import pytest
-from sqlalchemy import select
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 import seed
 from db import Base, SessionLocal, engine
+from main import app
 from models import Associate, Credential, CredentialType
 from verify.nppes import npi_checksum_ok
 
@@ -128,3 +130,26 @@ def test_issue_and_expiry_are_one_renewal_period_apart(associates):
                 continue
             months = c.credential_type.renewal_months
             assert c.expires_date - c.issued_date == timedelta(days=months * 30), (a.name, c.credential_type.name)
+
+
+def count_associates() -> int:
+    with SessionLocal() as db:
+        return db.scalar(select(func.count(Associate.id)))
+
+
+@pytest.mark.parametrize("variable", ["SEED_IF_EMPTY", "RENDER"])
+def test_startup_seeds_an_empty_database_when_flagged(monkeypatch, variable):
+    Base.metadata.drop_all(engine)
+    monkeypatch.setenv(variable, "true")
+    with TestClient(app) as client:
+        assert client.get("/api/stats").json()["associates"] == seed.TOTAL_ASSOCIATES
+    with TestClient(app):  # a restart leaves the data alone
+        assert count_associates() == seed.TOTAL_ASSOCIATES
+
+
+def test_startup_does_not_seed_without_the_flag(monkeypatch):
+    Base.metadata.drop_all(engine)
+    monkeypatch.delenv("SEED_IF_EMPTY", raising=False)
+    monkeypatch.delenv("RENDER", raising=False)
+    with TestClient(app) as client:
+        assert client.get("/api/stats").json()["associates"] == 0

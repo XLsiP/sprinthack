@@ -11,7 +11,21 @@ Do the steps in this order: the frontend needs the API's URL, and the API needs 
 3. Wait for the first build (several minutes). When it is live, open `https://<your-service>.onrender.com/api/health`; it should return `{"status":"ok"}`.
 4. Copy the service URL (no trailing slash). You need it in step 2.
 
-The container seeds 1,500 synthetic associates on start whenever the database is empty.
+The API seeds 1,500 synthetic associates on start whenever the database is empty. On Render this happens automatically; elsewhere set `SEED_IF_EMPTY=1`.
+
+### If the service was created by hand instead of from the blueprint
+
+A service made with **New → Web Service** does not read the variables from `render.yaml`, so add them yourself under **Environment**:
+
+| Variable | Value |
+| --- | --- |
+| `CORS_ORIGINS` | the Vercel production URL, no trailing slash |
+| `APP_URL` | the same URL |
+| `HR_EMAIL` | `hr@example.org` |
+
+Check **Settings → Runtime**. With **Docker**, leave "Docker Command" empty. With **Python 3**, evidence PDFs can fail because the Pango libraries are not guaranteed; if they do, recreate the service from the blueprint (a service's runtime cannot be changed).
+
+Keep `HR_EMAIL` a placeholder: it is stored on every alert and shown on the public Alerts page. To receive alert emails yourself, set `RESEND_API_KEY` and `ALERT_EMAIL_OVERRIDE_TO` instead.
 
 ## 2. Frontend on Vercel
 
@@ -48,6 +62,7 @@ Save; Render redeploys. Until `CORS_ORIGINS` is set, the site loads but every da
 | `HR_EMAIL` | yes | HR recipient for alerts. Set to `hr@example.org` by the blueprint. |
 | `RESEND_API_KEY` | no | Turns on real alert email. Without it, alerts stay in the outbox. |
 | `ALERT_EMAIL_OVERRIDE_TO` | no | Send every alert email to this one inbox. Needed for a real send, because seed addresses are `@example.org`. |
+| `SEED_IF_EMPTY` | no | `1` seeds an empty database at startup. Automatic on Render. |
 | `SCHEDULER_ENABLED` | no | `0` turns off the 06:00 daily job. |
 | `MOCK_DELAY_MS` | no | Simulated lookup delay for mocked sources. |
 | `DATABASE_URL` | no | Use Postgres instead of the built-in SQLite file. |
