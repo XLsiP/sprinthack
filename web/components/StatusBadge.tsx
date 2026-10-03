@@ -1,7 +1,7 @@
 import { Ban, CircleAlert, CircleCheck, CircleHelp, Clock, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { CredentialStatus } from "@/lib/api";
+import type { CredentialStatus, VerificationResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // Status colors used everywhere: red = expired/excluded, orange = within 30 days,
@@ -69,4 +69,24 @@ export function MockBadge() {
 /** For an associate who holds no credentials yet. */
 export function NoCredentialsBadge() {
   return <Badge className={TONES.gray}>No credentials</Badge>;
+}
+
+const RESULT: Record<VerificationResult, { label: string; tone: keyof typeof TONES; icon: LucideIcon }> = {
+  verified: { label: "Verified", tone: "green", icon: CircleCheck },
+  not_found: { label: "Not found", tone: "red", icon: CircleAlert },
+  mismatch: { label: "Mismatch", tone: "red", icon: CircleAlert },
+  excluded: { label: "Excluded", tone: "red", icon: Ban },
+  // An unreachable source leaves the status unchanged, so this is gray rather than red.
+  error: { label: "Could not check", tone: "gray", icon: CircleHelp },
+};
+
+/** Outcome of one verification, in the same colors as `StatusBadge`. */
+export function ResultBadge({ result }: { result: VerificationResult }) {
+  const { label, tone, icon: Icon } = RESULT[result];
+  return (
+    <Badge className={TONES[tone]}>
+      <Icon aria-hidden />
+      {label}
+    </Badge>
+  );
 }
