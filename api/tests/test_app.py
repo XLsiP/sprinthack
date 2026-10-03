@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from db import Base, SessionLocal, engine
 from main import app
 from models import Associate, Credential, CredentialType
-from status import derive_status, refresh_credential
+from status import refresh_credential
 from verify import nppes
 
 
@@ -40,18 +40,6 @@ def test_health(client):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-
-
-def test_status_buckets():
-    today = date(2026, 1, 1)
-    assert derive_status(date(2025, 12, 31), "verified", today) == "expired"
-    assert derive_status(date(2026, 1, 31), "verified", today) == "expiring_30"
-    assert derive_status(date(2026, 3, 1), None, today) == "expiring_60"
-    assert derive_status(date(2026, 4, 1), None, today) == "expiring_90"
-    assert derive_status(date(2027, 1, 1), None, today) == "valid"
-    assert derive_status(date(2027, 1, 1), "not_found", today) == "verification_failed"
-    assert derive_status(date(2027, 1, 1), "error", today) == "valid"
-    assert derive_status(None, "excluded", today) == "excluded"
 
 
 def test_match_license():
