@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { CredentialTable } from "@/components/CredentialTable";
 import { CredentialTimeline } from "@/components/CredentialTimeline";
+import { DEMO_MANAGER, useRole } from "@/components/Providers";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ function LoadingState() {
 export default function AssociatePage() {
   const id = Number(useParams<{ id: string }>().id);
   const queryClient = useQueryClient();
+  const { role } = useRole();
   const associate = useQuery({ queryKey: ["associate", id], queryFn: () => api.associate(id) });
 
   // Refetch before the toast so the badge and "Last verified" have already updated when it appears.
@@ -80,6 +82,21 @@ export default function AssociatePage() {
   }
   if (!associate.data) return <LoadingState />;
   const a = associate.data;
+  if (role === "manager" && a.manager_email !== DEMO_MANAGER) {
+    return (
+      <div className="space-y-4">
+        <BackLink />
+        <Card>
+          <CardContent>
+            <div className="space-y-1 py-8 text-center">
+              <p className="font-medium">This associate isn&apos;t on your team.</p>
+              <p className="text-sm text-muted-foreground">Switch to the HR view in the header to see everyone.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   const verifiedCount = a.credentials.filter((c) => c.last_verification?.result === "verified").length;
 
   const verifyButton = (credential: Credential) => {
