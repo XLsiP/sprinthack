@@ -1,0 +1,26 @@
+# Render Blueprint: the FastAPI backend. The Next.js frontend deploys on Vercel (see DEPLOY.md).
+services:
+  - type: web
+    name: beacon-credentialing-api
+    runtime: docker
+    plan: free
+    region: ohio
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # The Vercel site URL, no trailing slash. Set both after the frontend's first deploy.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: HR_EMAIL
+        value: hr@example.org
+      - key: MOCK_DELAY_MS
+        value: "400"
+      # Optional: real email. Enter these in the dashboard; never commit them.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ALERT_EMAIL_OVERRIDE_TO
+        sync: false

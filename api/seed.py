@@ -1,6 +1,7 @@
 """Synthetic data generator. Every name, NPI and credential number here is invented.
 
-Usage: python seed.py --reset
+Usage: python seed.py --reset        (start over)
+       python seed.py --if-empty     (seed only an empty database; used on deploy)
 Dates are relative to today so the dashboard always shows a mix of statuses.
 """
 import argparse
@@ -106,7 +107,8 @@ def within_renewal(days: int, renewal_months: int) -> int:
     return 91 + (days - 91) % (longest - 90)
 
 
-def seed(reset: bool, today: Optional[date] = None) -> int:
+def seed(reset: bool, today: Optional[date] = None, if_empty: bool = False) -> int:
+    """Seed the database and return the number of associates. With `if_empty`, leave existing data alone."""
     rng = random.Random(42)
     today = today or date.today()
     if reset:
@@ -115,6 +117,8 @@ def seed(reset: bool, today: Optional[date] = None) -> int:
 
     with SessionLocal() as db:
         if db.scalar(select(func.count(Associate.id))):
+            if if_empty:
+                return 0
             raise SystemExit("Database already has data. Run: python seed.py --reset")
 
         types = {}
@@ -203,4 +207,7 @@ def seed(reset: bool, today: Optional[date] = None) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reset", action="store_true", help="drop and recreate all tables first")
-    print("Seeded %d associates." % seed(parser.parse_args().reset))
+    parser.add_argument("--if-empty", action="store_true", help="seed only when there is no data (used on deploy)")
+    args = parser.parse_args()
+    seeded = seed(args.reset, if_empty=args.if_empty)
+    print("Seeded %d associates." % seeded if seeded else "Database already has data; left as is.")

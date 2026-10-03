@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from db import Base, SessionLocal, engine
-from main import app
+from main import app, cors_settings
 from models import Associate, Credential, CredentialType
 from status import refresh_credential
 from verify import nppes
@@ -105,3 +105,16 @@ def test_fake_npi_is_not_looked_up(client, monkeypatch):
     associate_id, credential_id = add_associate(None, type_name="NPI Registration", source="NPPES", npi="1234567890")
     assert client.post("/api/verify/credential/%d" % credential_id).json()["result"] == "not_found"
     assert client.get("/api/associates/%d" % associate_id).json()["worst_status"] == "verification_failed"
+
+
+def test_cors_settings(monkeypatch):
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    monkeypatch.delenv("CORS_ORIGIN_REGEX", raising=False)
+    assert cors_settings() == {"allow_origins": ["http://localhost:3000"], "allow_origin_regex": None}
+
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.vercel.app/, http://localhost:3000,")
+    monkeypatch.setenv("CORS_ORIGIN_REGEX", r"https://app-.*\.vercel\.app")
+    assert cors_settings() == {
+        "allow_origins": ["https://app.vercel.app", "http://localhost:3000"],
+        "allow_origin_regex": r"https://app-.*\.vercel\.app",
+    }

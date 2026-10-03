@@ -24,6 +24,15 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
+def cors_settings() -> dict:
+    """Allowed browser origins: a comma-separated CORS_ORIGINS list, plus an optional CORS_ORIGIN_REGEX."""
+    origins = [o.strip().rstrip("/") for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")]
+    return {
+        "allow_origins": [o for o in origins if o],
+        "allow_origin_regex": os.environ.get("CORS_ORIGIN_REGEX", "").strip() or None,
+    }
+
+
 app = FastAPI(title="Beacon Credentialing Tracker", lifespan=lifespan)
 
 
@@ -47,7 +56,7 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","),
+    **cors_settings(),
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Total-Count"],
