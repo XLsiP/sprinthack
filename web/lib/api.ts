@@ -1,7 +1,5 @@
 // Typed client for the FastAPI backend. Keep in sync with api/schemas.py.
 
-import { mockAlertRun, mockAlerts } from "./mocks";
-
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type CredentialStatus =
@@ -106,7 +104,6 @@ export interface Page<T> {
   total: number;
 }
 
-// Provisional: the backend has no alert schemas yet, so these follow the data model in CLAUDE.md.
 export type AlertThreshold = "90" | "60" | "30" | "expired" | "excluded";
 
 export interface Alert {
@@ -139,12 +136,6 @@ export interface DailyJobStatus {
   next_run_at: string | null;
   running: boolean;
   last_run: DailyRunResult | null;
-}
-
-/** Data from an endpoint that may still be mocked. Show a "MOCK DATA" label when `isMock` is true. */
-export interface MaybeMock<T> {
-  data: T;
-  isMock: boolean;
 }
 
 export class ApiError extends Error {
@@ -195,14 +186,14 @@ async function page<T>(path: string, params: Params): Promise<Page<T>> {
   return { items, total: header === null ? items.length : Number(header) };
 }
 
-// MOCK: remove when backend alerts router merges (call `request` directly and drop MaybeMock).
-async function orMock<T>(load: () => Promise<T>, mock: () => T, label: string): Promise<MaybeMock<T>> {
-  try {
-    return { data: await load(), isMock: false };
-  } catch (error) {
-    if (!(error instanceof ApiError && error.status === 404)) throw error;
-    console.warn(`${label} returned 404; showing MOCK DATA until the backend alerts router merges.`);
-    return { data: mock(), isMock: true };
+/** Every matching credential, fetched in pages of the backend's maximum `limit`. */
+async function allCredentials(params: Omit<CredentialQuery, "limit" | "offset"> = {}): Promise<Credential[]> {
+  const PAGE = 2000;
+  const items: Credential[] = [];
+  for (;;) {
+    const next = await page<Credential>("/credentials", { ...params, limit: PAGE, offset: items.length });
+    items.push(...next.items);
+    if (next.items.length === 0 || items.length >= next.total) return items;
   }
 }
 
@@ -223,9 +214,9 @@ export const api = {
   verifyCredential: (id: number) => request<Verification>(`/verify/credential/${id}`, undefined, "POST"),
   verifyAssociate: (id: number) => request<Verification[]>(`/verify/associate/${id}`, undefined, "POST"),
   verifyAll: (scope: Scope = {}) => request<VerifyAllResult>("/verify/all", { ...scope }, "POST"),
-  // MOCK: these fall back to lib/mocks.ts on a 404; remove the fallback when backend alerts router merges.
-  alerts: () => orMock(() => request<Alert[]>("/alerts"), mockAlerts, "GET /api/alerts"),
-  runAlerts: () => orMock(() => request<AlertRunResult>("/alerts/run", undefined, "POST"), mockAlertRun, "POST /api/alerts/run"),
+  allCredentials,
+  alerts: () => request<Alert[]>("/alerts"),
+  runAlerts: () => request<AlertRunResult>("/alerts/run", undefined, "POST"),
   dailyJob: () => request<DailyJobStatus>("/jobs/daily"),
   runDailyJob: () => request<DailyRunResult>("/jobs/daily/run", undefined, "POST"),
 };
