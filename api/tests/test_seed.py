@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -102,3 +102,19 @@ def test_seed_is_deterministic(associates):
 def test_seed_refuses_a_populated_database(associates):
     with pytest.raises(SystemExit):
         seed.seed(reset=False, today=TODAY)
+
+
+def test_no_credential_is_issued_in_the_future(associates):
+    future = [(a.name, c.credential_type.name) for a in associates for c in a.credentials
+              if c.issued_date and c.issued_date > TODAY]
+    assert future == []
+
+
+def test_issue_and_expiry_are_one_renewal_period_apart(associates):
+    for a in associates:
+        for c in a.credentials:
+            if c.expires_date is None:
+                assert c.issued_date is None
+                continue
+            months = c.credential_type.renewal_months
+            assert c.expires_date - c.issued_date == timedelta(days=months * 30), (a.name, c.credential_type.name)
