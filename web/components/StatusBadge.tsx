@@ -23,6 +23,23 @@ const BAR_TONES = {
   gray: "bg-gray-400",
 } as const;
 
+// The same solid colors as CSS values, for Recharts (SVG fills can't take Tailwind classes).
+const FILLS = {
+  red: "var(--color-red-500)",
+  orange: "var(--color-orange-500)",
+  yellow: "var(--color-yellow-400)",
+  green: "var(--color-green-500)",
+  gray: "var(--color-gray-400)",
+} as const;
+
+/** Chart fill for a status, matching its badge. */
+export function statusFill(status: CredentialStatus): string {
+  return FILLS[STATUS[status].tone];
+}
+
+/** Chart fill for "not yet verified", matching `UnverifiedBadge`. */
+export const UNVERIFIED_FILL = FILLS.gray;
+
 export const STATUS: Record<CredentialStatus, { label: string; tone: keyof typeof TONES; icon: LucideIcon }> = {
   excluded: { label: "Excluded", tone: "red", icon: Ban },
   expired: { label: "Expired", tone: "red", icon: CircleAlert },
