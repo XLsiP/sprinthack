@@ -22,9 +22,9 @@ WORST_URGENCY = func.coalesce(
 @router.get("", response_model=list[AssociateOut])
 def list_associates(
     response: Response,
-    manager: Optional[str] = None,
-    department: Optional[str] = None,
-    facility: Optional[str] = None,
+    manager: Optional[str] = Query(None, min_length=1, max_length=200),
+    department: Optional[str] = Query(None, min_length=1, max_length=200),
+    facility: Optional[str] = Query(None, min_length=1, max_length=200),
     status: Optional[list[CredentialStatus]] = Query(None),
     sort: Literal["urgency", "name"] = "urgency",
     limit: int = Query(200, ge=1, le=2000),

@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -20,9 +20,9 @@ TIMELINE_WEEKS = 13  # 13 weeks = days 0 through 90
 
 @router.get("/stats", response_model=StatsOut)
 def stats(
-    manager: Optional[str] = None,
-    department: Optional[str] = None,
-    facility: Optional[str] = None,
+    manager: Optional[str] = Query(None, min_length=1, max_length=200),
+    department: Optional[str] = Query(None, min_length=1, max_length=200),
+    facility: Optional[str] = Query(None, min_length=1, max_length=200),
     db: Session = Depends(get_db),
 ) -> StatsOut:
     """Counts for the dashboard, all scoped by the optional manager / department / facility filters.

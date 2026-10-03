@@ -50,6 +50,37 @@ def test_startup_creates_tables(empty_db):
         assert columns_by_table() == CONTRACT
 
 
+def test_startup_adds_indexes_to_existing_tables(db):
+    index_names = {
+        "ix_associates_manager_department_facility",
+        "ix_credentials_status_expires_date",
+    }
+    with engine.begin() as connection:
+        for name in index_names:
+            connection.exec_driver_sql("DROP INDEX %s" % name)
+
+    with TestClient(app):
+        existing_indexes = {
+            index["name"]
+            for table in ("associates", "credentials")
+            for index in inspect(engine).get_indexes(table)
+        }
+
+    assert index_names <= existing_indexes
+
+
+def test_compound_indexes_cover_scope_and_expiry_filters(db):
+    indexes = {
+        table: {index["name"]: index["column_names"] for index in inspect(engine).get_indexes(table)}
+        for table in ("associates", "credentials")
+    }
+
+    assert indexes["associates"]["ix_associates_manager_department_facility"] == [
+        "manager_email", "department", "facility",
+    ]
+    assert indexes["credentials"]["ix_credentials_status_expires_date"] == ["status", "expires_date"]
+
+
 def test_round_trip_and_cascade_delete(db):
     ctype = CredentialType(name="ARRT Certification", issuing_source="ARRT", verify_method="mock", renewal_months=12)
     associate = Associate(

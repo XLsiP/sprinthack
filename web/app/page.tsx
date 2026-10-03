@@ -6,7 +6,9 @@ import { useState } from "react";
 
 import { AssociateTable, type AssociateSort } from "@/components/AssociateTable";
 import { CredentialTable } from "@/components/CredentialTable";
+import { ExpiryTimelineChart } from "@/components/ExpiryTimelineChart";
 import { useScope } from "@/components/ScopeFilters";
+import { StatusBreakdownChart } from "@/components/StatusBreakdownChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type CredentialStatus, type Stats } from "@/lib/api";
@@ -136,6 +138,11 @@ export default function Dashboard() {
               />
             );
           })}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StatusBreakdownChart stats={stats.data} isLoading={stats.isLoading} error={stats.error} />
+        <ExpiryTimelineChart stats={stats.data} isLoading={stats.isLoading} error={stats.error} />
       </div>
 
       <Card>
