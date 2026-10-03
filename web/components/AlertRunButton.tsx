@@ -12,7 +12,9 @@ function describe(result: AlertRunResult): string {
   const parts = (Object.entries(result.by_threshold) as [AlertThreshold, number][]).map(
     ([threshold, count]) => `${count.toLocaleString()} × ${THRESHOLD[threshold].label}`,
   );
-  return `Sent to managers and HR: ${parts.join(", ")}.`;
+  const emailed = result.by_channel?.email ?? 0;
+  const delivery = emailed > 0 ? ` ${emailed.toLocaleString()} emailed, the rest kept in the outbox.` : " Recorded in the outbox.";
+  return `Sent to managers and HR: ${parts.join(", ")}.${delivery}`;
 }
 
 /** Demo action: run the alert sweep now instead of waiting for the daily job. */

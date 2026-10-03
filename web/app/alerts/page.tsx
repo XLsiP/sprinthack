@@ -50,7 +50,7 @@ export default function AlertsPage() {
           <h1 className="text-2xl font-semibold">Alerts</h1>
           <p className="text-sm text-muted-foreground">
             Sent to the associate&apos;s manager and HR at 90, 60 and 30 days before expiry, on expiry, and on an OIG
-            exclusion. Each threshold is sent once per credential. Without an email provider, alerts are recorded in this outbox.
+            exclusion. Each threshold is sent once per credential. Every alert is recorded here, whether it was emailed or kept in the outbox.
           </p>
         </div>
         {role === "hr" && <AlertRunButton />}
@@ -78,31 +78,33 @@ export default function AlertsPage() {
         </p>
       )}
 
-      <Card>
-        <CardContent>
-          {!alerts.data ? (
-            !alerts.error && <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-          ) : alerts.data.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No alerts sent yet. Alerts go out 90, 60 and 30 days before expiry, on expiry, and on an OIG exclusion.
-            </p>
-          ) : (
-            <>
-              <AlertTable alerts={filtered.slice(0, shown)} credentials={byId} />
-              {filtered.length > shown && (
-                <div className="flex items-center justify-between pt-3 text-xs text-muted-foreground">
-                  <span>
-                    Showing {shown.toLocaleString()} of {filtered.length.toLocaleString()}, newest first.
-                  </span>
-                  <Button size="sm" variant="outline" onClick={() => setShown((n) => n + PAGE)}>
-                    Show more
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {(alerts.data || !alerts.error) && (
+        <Card>
+          <CardContent>
+            {!alerts.data ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            ) : alerts.data.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No alerts sent yet. Alerts go out 90, 60 and 30 days before expiry, on expiry, and on an OIG exclusion.
+              </p>
+            ) : (
+              <>
+                <AlertTable alerts={filtered.slice(0, shown)} credentials={byId} />
+                {filtered.length > shown && (
+                  <div className="flex items-center justify-between pt-3 text-xs text-muted-foreground">
+                    <span>
+                      Showing {shown.toLocaleString()} of {filtered.length.toLocaleString()}, newest first.
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => setShown((n) => n + PAGE)}>
+                      Show more
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

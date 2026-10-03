@@ -54,7 +54,10 @@ export function AlertTable({ alerts, credentials }: { alerts: Alert[]; credentia
                   <span className="text-muted-foreground">Credential #{a.credential_id}</span>
                 )}
               </TableCell>
-              <TableCell>{a.sent_to}</TableCell>
+              <TableCell>
+                {a.sent_to}
+                <div className="text-xs text-muted-foreground">{a.channel === "email" ? "Emailed" : "Outbox only"}</div>
+              </TableCell>
             </TableRow>
           );
         })}
