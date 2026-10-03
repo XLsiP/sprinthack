@@ -23,10 +23,19 @@ function Filter({
   const items = [{ value: ALL, label: `All ${label}` }, ...options.map((o) => ({ value: o, label: o }))];
   return (
     <Select items={items} value={value ?? ALL} onValueChange={(v) => onChange(!v || v === ALL ? undefined : v)}>
-      <SelectTrigger aria-label={label} className="min-w-44">
-        <SelectValue />
+      <SelectTrigger aria-label={label} className="max-w-full min-w-44">
+        {/* Every label sits invisibly in the same grid cell as the value, so the trigger (and the list, which matches
+            its width) fits the longest option whatever is picked; on a narrow row it shrinks and the value truncates. */}
+        <span className="grid min-w-0 flex-1 overflow-hidden">
+          {items.map((item) => (
+            <span key={item.value} aria-hidden className="invisible col-start-1 row-start-1 h-0 whitespace-nowrap">
+              {item.label}
+            </span>
+          ))}
+          <SelectValue className="col-start-1 row-start-1 block truncate" />
+        </span>
       </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false}>
+      <SelectContent alignItemWithTrigger={false} className="max-w-(--available-width)">
         {items.map((item) => (
           <SelectItem key={item.value} value={item.value}>
             {item.label}
