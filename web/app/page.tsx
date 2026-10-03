@@ -178,7 +178,8 @@ export default function Dashboard() {
           })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Side by side only from 72rem: below that each card is too narrow for the status chart's label column. */}
+      <div className="grid gap-4 min-[72rem]:grid-cols-2">
         <StatusBreakdownChart stats={stats.data} isLoading={stats.isLoading} error={stats.error} />
         <ExpiryTimelineChart stats={stats.data} isLoading={stats.isLoading} error={stats.error} />
       </div>
