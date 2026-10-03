@@ -7,6 +7,24 @@ import type { Credential } from "@/lib/api";
 
 const DAY = 86_400_000;
 
+/** Clearance on each side of the "Today" tick: half its label's width plus a small gap. */
+const TODAY_CLEARANCE = "1.5rem";
+
+/**
+ * Where a year label sits. Labels are centered on their tick, except near either edge (kept inside the card)
+ * and near today, where they hang off the far side of the tick and are pushed clear of the Today label.
+ */
+function yearLabelPlacement(position: number, todayPosition: number): { className: string; left: string } {
+  if (Math.abs(position - todayPosition) <= 12) {
+    return position > todayPosition
+      ? { className: "", left: `max(${position}%, calc(${todayPosition}% + ${TODAY_CLEARANCE}))` }
+      : { className: "-translate-x-full", left: `min(${position}%, calc(${todayPosition}% - ${TODAY_CLEARANCE}))` };
+  }
+  if (position < 5) return { className: "", left: `${position}%` };
+  if (position > 95) return { className: "-translate-x-full", left: `${position}%` };
+  return { className: "-translate-x-1/2", left: `${position}%` };
+}
+
 /** Milliseconds for an ISO `YYYY-MM-DD` date, at UTC midnight. */
 function ms(isoDate: string): number {
   return Date.parse(`${isoDate}T00:00:00Z`);
@@ -38,13 +56,14 @@ export function CredentialTimeline({ credentials }: { credentials: Credential[] 
     <div className="grid grid-cols-1 sm:grid-cols-[13rem_1fr] sm:gap-x-4">
       <div className="hidden sm:block" />
       <div className="relative h-6 text-xs text-muted-foreground" aria-hidden>
-        {years
-          .filter((y) => Math.abs(percent(Date.UTC(y, 0, 1)) - percent(today)) > 12) // leave room for the Today label
-          .map((y) => (
-            <span key={y} className="absolute top-0 -translate-x-1/2" style={{ left: `${percent(Date.UTC(y, 0, 1))}%` }}>
+        {years.map((y) => {
+          const { className, left } = yearLabelPlacement(percent(Date.UTC(y, 0, 1)), percent(today));
+          return (
+            <span key={y} className={`absolute top-0 ${className}`} style={{ left }}>
               {y}
             </span>
-          ))}
+          );
+        })}
         <span
           className="absolute top-0 -translate-x-1/2 rounded bg-foreground px-1 text-background"
           style={{ left: `${percent(today)}%` }}
@@ -67,7 +86,7 @@ export function CredentialTimeline({ credentials }: { credentials: Credential[] 
                 {STATUS[c.status].label} · {summary}
               </span>
             </div>
-            <div className="relative h-9 border-b sm:border-b-0" title={`${c.credential_type}: ${summary}, ${STATUS[c.status].label}`}>
+            <div className="relative min-h-9 border-b sm:border-b-0" title={`${c.credential_type}: ${summary}, ${STATUS[c.status].label}`}>
               {years.map((y) => (
                 <div
                   key={y}
@@ -78,13 +97,13 @@ export function CredentialTimeline({ credentials }: { credentials: Credential[] 
               ))}
               {c.expires_date ? (
                 <div
-                  className={`absolute top-2.5 h-4 rounded-sm ${statusBarClass(c.status)}`}
+                  className={`absolute top-1/2 h-4 -translate-y-1/2 rounded-sm ${statusBarClass(c.status)}`}
                   style={{ left: `${left}%`, width: `${Math.max(right - left, 0.75)}%` }}
                 />
               ) : (
                 <>
                   <div className="absolute inset-x-0 top-1/2 border-t-2 border-dotted border-muted-foreground/50" />
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 bg-card pl-1.5">
+                  <div className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-card pl-1.5">
                     <StatusBadge status={c.status} />
                   </div>
                 </>
