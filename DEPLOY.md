@@ -59,6 +59,7 @@ Save; Render redeploys. Until `CORS_ORIGINS` is set, the site loads but every da
 | `CORS_ORIGINS` | yes | Comma-separated site URLs allowed to call the API. |
 | `CORS_ORIGIN_REGEX` | no | Extra allowed origins by pattern, e.g. `https://your-project-.*\.vercel\.app` for Vercel preview deployments. |
 | `APP_URL` | yes | Site URL used in alert email links. |
+| `ACCESS_PASSWORD` | no | Shared password for the whole site. When set, every `/api` route except `/api/health` and `/api/access` requires it, and the site asks for it once per browser session. Set it before loading any real staff data. |
 | `HR_EMAIL` | yes | HR recipient for alerts. Set to `hr@example.org` by the blueprint. |
 | `RESEND_API_KEY` | no | Turns on real alert email. Without it, alerts stay in the outbox. |
 | `ALERT_EMAIL_OVERRIDE_TO` | no | Send every alert email to this one inbox. Needed for a real send, because seed addresses are `@example.org`. |

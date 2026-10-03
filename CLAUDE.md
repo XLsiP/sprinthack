@@ -72,7 +72,7 @@ Derived credential status: `valid`, `unverified`, `expiring_90`, `expiring_60`, 
 
 ## API (FastAPI, prefix `/api`)
 
-- `GET /health` (liveness check, returns `{"status": "ok"}`)
+- `GET /health` (liveness check, returns `{"status": "ok"}`) · `GET /access` (is a password required, was the right one sent)
 - `GET /associates?manager=&department=&facility=&status=&sort=&limit=&offset=` (`status` repeatable; `sort` is `urgency` (default) or `name`; total matches in the `X-Total-Count` header)
 - `GET /associates/{id}` (with credentials + latest verifications)
 - `GET /credentials?status=&expires_before=&manager=&department=&facility=&limit=&offset=` (most urgent first; `status` repeatable; `expires_before` exclusive; total matches in the `X-Total-Count` header)
@@ -101,6 +101,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 - Recipients: the associate's manager and HR. Never send the same threshold twice for one credential.
 - The daily job (`api/scheduler.py`) re-verifies every credential, which refreshes each stored status, then runs the alert sweep. It runs at 06:00 Eastern by default; configure with `DAILY_JOB_HOUR`, `DAILY_JOB_MINUTE`, `SCHEDULER_TIMEZONE`, and turn the schedule off with `SCHEDULER_ENABLED=0`. Without `HR_EMAIL` it still re-verifies but skips the sweep.
 - Email (`api/mailer.py`): with `RESEND_API_KEY` set, each recipient gets one HTML digest per sweep and those alert rows become `channel="email"`; otherwise, or if a send fails, they stay `channel="outbox"`. Reserved test addresses such as `@example.org` (all seed data) are never emailed unless `ALERT_EMAIL_OVERRIDE_TO` redirects every digest to one real inbox. `ALERT_EMAIL_MAX_PER_RUN` (default 10) caps emails per sweep, HR first; `ALERT_EMAIL_FROM` and `APP_URL` set the sender and the link base.
+- `ACCESS_PASSWORD` (optional) puts a shared password on the API: sent as the `X-Access-Password` header, or `?access=` for links such as evidence PDFs. `GET /access` reports whether one is required. Unset means open, as in local development.
 - `CORS_ORIGINS` is a comma-separated list of site URLs allowed to call the API (default `http://localhost:3000`); `CORS_ORIGIN_REGEX` optionally allows more by pattern.
 - Set `HR_EMAIL` in the API environment for `POST /api/alerts/run`; the endpoint returns a configuration error if it is unset. Alerts are recorded in the outbox, one row per recipient.
 

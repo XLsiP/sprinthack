@@ -1,5 +1,7 @@
 // Typed client for the FastAPI backend. Keep in sync with api/schemas.py.
 
+import { getAccessPassword } from "./access";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type CredentialStatus =
@@ -143,6 +145,11 @@ export interface DailyJobStatus {
   last_run: DailyRunResult | null;
 }
 
+export interface AccessStatus {
+  required: boolean;
+  granted: boolean;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -166,7 +173,10 @@ function url(path: string, params: Params = {}): string {
 }
 
 async function send(path: string, params?: Params, method: "GET" | "POST" = "GET"): Promise<Response> {
-  const res = await fetch(url(path, params), { method });
+  // Only sent when a password is set, so an open API gets no CORS preflight.
+  const password = getAccessPassword();
+  const headers = password ? { "X-Access-Password": password } : undefined;
+  const res = await fetch(url(path, params), { method, headers });
   if (res.ok) return res;
   let message = `${method} ${path} failed (${res.status})`;
   try {
@@ -204,11 +214,13 @@ async function allCredentials(params: Omit<CredentialQuery, "limit" | "offset"> 
 
 /** Link to the evidence PDF for one verification. */
 export function evidenceUrl(verificationId: number): string {
-  return url(`/evidence/${verificationId}.pdf`);
+  // A plain link cannot send a header, so the password travels as a query parameter.
+  return url(`/evidence/${verificationId}.pdf`, { access: getAccessPassword() });
 }
 
 export const api = {
   health: () => request<{ status: "ok" }>("/health"),
+  access: () => request<AccessStatus>("/access"),
   stats: (scope: Scope = {}) => request<Stats>("/stats", { ...scope }),
   filters: () => request<Filters>("/filters"),
   credentials: (params: CredentialQuery = {}) => request<Credential[]>("/credentials", { ...params }),
