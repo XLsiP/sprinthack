@@ -120,6 +120,7 @@ class AlertOut(BaseModel):
 class AlertRunResult(BaseModel):
     sent: int
     by_threshold: dict[AlertThreshold, int]
+    by_channel: dict[str, int]  # alert rows emailed vs left in the outbox
 
 
 class DailyRunOut(BaseModel):
