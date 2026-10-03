@@ -122,6 +122,23 @@ class AlertRunResult(BaseModel):
     by_threshold: dict[AlertThreshold, int]
 
 
+class DailyRunOut(BaseModel):
+    trigger: Literal["scheduled", "manual"]
+    started_at: datetime
+    finished_at: datetime
+    checked: int
+    by_result: dict[str, int]
+    alerts: Optional[AlertRunResult]  # None when the sweep was skipped
+    alerts_skipped: Optional[str]  # why the sweep was skipped, if it was
+
+
+class DailyJobStatusOut(BaseModel):
+    enabled: bool  # False when the schedule is turned off; the manual run still works
+    next_run_at: Optional[datetime]
+    running: bool
+    last_run: Optional[DailyRunOut]  # since the API last started
+
+
 class FacilityStats(BaseModel):
     facility: str
     total: int

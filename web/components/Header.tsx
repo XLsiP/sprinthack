@@ -4,6 +4,8 @@ import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { DailyRunButton } from "@/components/DailyRunButton";
+import { useRole } from "@/components/Providers";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +17,7 @@ const NAV = [
 
 export function Header() {
   const pathname = usePathname();
+  const { role } = useRole();
   return (
     <header className="border-b bg-background">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-6 py-3">
@@ -36,7 +39,8 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {role === "hr" && <DailyRunButton />}
           <RoleSwitcher />
         </div>
       </div>
