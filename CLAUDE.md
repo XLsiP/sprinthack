@@ -68,7 +68,7 @@ Contract between frontend and backend; change only with team agreement.
 
 Optional (nullable) columns: `associates.npi`, `credential_types.renewal_months`, `credentials.number`, `credentials.issued_date`, `credentials.expires_date` (empty for credentials that don't expire, such as the NPI and OIG checks), `verifications.evidence_path`.
 
-Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`, `expired`, `verification_failed`, `excluded`.
+Derived credential status: `valid`, `expiring_90`, `expiring_60`, `expiring_30`, `expired`, `verification_failed`, `excluded`. Computed by `compute_status` in `api/status.py` from `expires_date` and the latest verification; precedence is excluded, expired, verification_failed (`not_found` or `mismatch`), then the expiry buckets. `error` results are ignored, so an unreachable source never clears an earlier exclusion or failure.
 
 ## API (FastAPI, prefix `/api`)
 

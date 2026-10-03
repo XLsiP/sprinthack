@@ -18,7 +18,11 @@ def days_left(expires_date: Optional[date], today: Optional[date] = None) -> Opt
     return (expires_date - (today or date.today())).days
 
 
-def derive_status(expires_date: Optional[date], last_result: Optional[str], today: Optional[date] = None) -> str:
+def compute_status(expires_date: Optional[date], last_result: Optional[str], today: Optional[date] = None) -> str:
+    """Status from the expiration date and the latest conclusive verification result.
+
+    Precedence: excluded, then expired, then verification_failed, then the expiry buckets.
+    """
     if last_result == "excluded":
         return "excluded"
     left = days_left(expires_date, today)
@@ -40,8 +44,9 @@ def worst(statuses: list[str]) -> Optional[str]:
 
 
 def refresh_credential(credential: Credential, today: Optional[date] = None) -> None:
-    last = credential.verifications[-1].result if credential.verifications else None
-    credential.status = derive_status(credential.expires_date, last, today)
+    # An "error" means the source could not be reached, so it must not clear an earlier exclusion or failure.
+    conclusive = [v.result for v in credential.verifications if v.result != "error"]
+    credential.status = compute_status(credential.expires_date, conclusive[-1] if conclusive else None, today)
 
 
 def refresh_statuses(db: Session, today: Optional[date] = None) -> None:
