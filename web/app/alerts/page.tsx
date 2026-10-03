@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { AlertRunButton } from "@/components/AlertRunButton";
 import { AlertTable } from "@/components/AlertTable";
-import { useRole } from "@/components/Providers";
+import { DEMO_MANAGER, useRole } from "@/components/Providers";
 import { THRESHOLD } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,21 +21,28 @@ export default function AlertsPage() {
   const [threshold, setThreshold] = useState<AlertThreshold | null>(null);
   const [shown, setShown] = useState(PAGE);
 
+  const isManager = role === "manager";
+
   const alerts = useQuery({ queryKey: ["alerts"], queryFn: api.alerts });
   const credentials = useQuery({
-    queryKey: ["credentials", "alerted"],
-    queryFn: () => api.allCredentials({ status: ALERTED }),
+    queryKey: ["credentials", "alerted", role],
+    queryFn: () => api.allCredentials({ status: ALERTED, manager: isManager ? DEMO_MANAGER : undefined }),
   });
   const byId = useMemo(() => new Map((credentials.data ?? []).map((c) => [c.id, c])), [credentials.data]);
 
+  // One row per recipient, so a manager's alerts are exactly the rows sent to them.
+  const visible = useMemo(
+    () => (alerts.data ? alerts.data.filter((a) => !isManager || a.sent_to === DEMO_MANAGER) : undefined),
+    [alerts.data, isManager],
+  );
   const counts = useMemo(() => {
     const out = Object.fromEntries(THRESHOLDS.map((t) => [t, 0])) as Record<AlertThreshold, number>;
-    for (const a of alerts.data ?? []) out[a.threshold] += 1;
+    for (const a of visible ?? []) out[a.threshold] += 1;
     return out;
-  }, [alerts.data]);
+  }, [visible]);
   const filtered = useMemo(
-    () => (alerts.data ?? []).filter((a) => threshold === null || a.threshold === threshold),
-    [alerts.data, threshold],
+    () => (visible ?? []).filter((a) => threshold === null || a.threshold === threshold),
+    [visible, threshold],
   );
 
   function pick(next: AlertThreshold | null) {
@@ -52,14 +59,17 @@ export default function AlertsPage() {
             Sent to the associate&apos;s manager and HR at 90, 60 and 30 days before expiry, on expiry, and on an OIG
             exclusion. Each threshold is sent once per credential. Every alert is recorded here, whether it was emailed or kept in the outbox.
           </p>
+          <p className="text-sm font-medium">
+            {isManager ? "Showing alerts sent to you for your team." : "Showing all alerts across every facility."}
+          </p>
         </div>
         {role === "hr" && <AlertRunButton />}
       </div>
 
-      {alerts.data && alerts.data.length > 0 && (
+      {visible && visible.length > 0 && (
         <div role="group" aria-label="Filter by threshold" className="flex flex-wrap gap-2">
           <Button size="sm" variant={threshold === null ? "default" : "outline"} aria-pressed={threshold === null} onClick={() => pick(null)}>
-            All <span className="tabular-nums">{alerts.data.length.toLocaleString()}</span>
+            All <span className="tabular-nums">{visible.length.toLocaleString()}</span>
           </Button>
           {THRESHOLDS.map((t) => (
             <Button key={t} size="sm" variant={threshold === t ? "default" : "outline"} aria-pressed={threshold === t} onClick={() => pick(t)}>
@@ -78,12 +88,12 @@ export default function AlertsPage() {
         </p>
       )}
 
-      {(alerts.data || !alerts.error) && (
+      {(visible || !alerts.error) && (
         <Card>
           <CardContent>
-            {!alerts.data ? (
+            {!visible ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-            ) : alerts.data.length === 0 ? (
+            ) : visible.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No alerts sent yet. Alerts go out 90, 60 and 30 days before expiry, on expiry, and on an OIG exclusion.
               </p>
