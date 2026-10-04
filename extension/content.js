@@ -2,7 +2,8 @@
 //
 // The tracker adds the name to the link after a "#": ...#bct-last=Smith&bct-first=Pat
 // (the part after "#" is never sent to the lookup site). This script reads it and types the name
-// into the search form. It does not touch the "I'm not a robot" check and does not press Search.
+// into the search form. It never touches an "I'm not a robot" check. It presses Search only on a
+// site that has no such check (see `postback` in sites.js); everywhere else the person does.
 (() => {
   const params = new URLSearchParams(location.hash.replace(/^#/, ""));
   const last = params.get("bct-last");
@@ -54,10 +55,19 @@
     type(lastBox, last);
     if (firstBox && first) type(firstBox, first);
     lastBox.scrollIntoView({ block: "center" });
-    notice(
-      `Credentialing Tracker filled in "${[first, last].filter(Boolean).join(" ")}". ` +
-        `Tick "I'm not a robot" if asked, then press Search.`,
-    );
+    const who = [first, last].filter(Boolean).join(" ");
+    const form = lastBox.form;
+    const target = form && form.querySelector("input[name='__EVENTTARGET']");
+    if (site.postback && target) {
+      notice(`Credentialing Tracker is searching for "${who}".`);
+      // Leave the name off the address so going back to this page does not search again.
+      history.replaceState(null, "", location.pathname + location.search);
+      // Submit the form the way the site's own Search button does.
+      target.value = site.postback;
+      HTMLFormElement.prototype.submit.call(form);
+    } else {
+      notice(`Credentialing Tracker filled in "${who}". Tick "I'm not a robot" if asked, then press Search.`);
+    }
     return true;
   }
 

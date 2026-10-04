@@ -1,16 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Credentialing Tracker helper",
-  "version": "0.1.0",
-  "description": "Fills in the person's name on ARRT, ARDMS and NMTCB lookup pages opened from the Credentialing Tracker. You complete the \"I'm not a robot\" check and press Search yourself.",
+  "version": "0.2.0",
+  "description": "Fills in the person's name on credential lookup pages (ARRT, NMTCB, Michigan license) opened from the Credentialing Tracker. You complete any \"I'm not a robot\" check yourself.",
   "content_scripts": [
     {
       "matches": [
         "https://www.arrt.org/*",
         "https://arrt.org/*",
-        "https://www.ardms.org/*",
-        "https://www.inteleos.org/*",
-        "https://www.nmtcb.org/*"
+        "https://www.nmtcb.org/*",
+        "https://aca-prod.accela.com/MILARA/*"
       ],
       "js": ["sites.js", "content.js"],
       "run_at": "document_idle"

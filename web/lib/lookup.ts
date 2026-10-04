@@ -11,9 +11,9 @@ export function splitName(name: string): { first: string; last: string } {
 /**
  * The lookup page for a credential, carrying the person's name.
  *
- * The name goes after "#", which the browser never sends to the site. The helper extension
- * (see /extension) reads it and fills in the search form. NMTCB's page also accepts the name
- * in the address itself, so that link works without the helper.
+ * ARDMS and NMTCB accept the name in the address, so those links open on the person's result.
+ * ARRT and Michigan do not: there the name goes after "#", which the browser never sends to the
+ * site, and the helper extension (see /extension) reads it and fills in the search form.
  */
 export function lookupLink(c: Pick<Credential, "lookup_url" | "issuing_source" | "associate_name">): string | null {
   if (!c.lookup_url) return null;
@@ -22,6 +22,11 @@ export function lookupLink(c: Pick<Credential, "lookup_url" | "issuing_source" |
   if (c.issuing_source === "NMTCB") {
     const query = new URLSearchParams({ LastName: last, FirstName: first });
     return `https://www.nmtcb.org/verification/results?${query}#${hash}`;
+  }
+  if (c.issuing_source === "ARDMS") {
+    // The ARDMS directory is run by Inteleos; its search page takes the name directly.
+    const query = new URLSearchParams({ q: c.associate_name.trim() });
+    return `https://myportal.inteleos.org/status-verification-directory.html?${query}`;
   }
   return `${c.lookup_url.split("#")[0]}#${hash}`;
 }
