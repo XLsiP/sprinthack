@@ -94,7 +94,7 @@ export interface ManualVerification {
 export interface VerifyAllResult {
   checked: number;
   by_result: Partial<Record<VerificationResult, number>>;
-  skipped_manual?: number; // credentials verified by hand, left alone
+  skipped_manual: number; // credentials verified by hand, left alone
 }
 
 /** Scope shared by the list, stats and verify-all endpoints. */
