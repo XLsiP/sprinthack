@@ -7,14 +7,9 @@ import { toast } from "sonner";
 import { MockBadge, ResultBadge, StatusBadge, UnverifiedBadge } from "@/components/StatusBadge";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-alex/lookup-helper
-import { verificationFeedback } from "@/components/VerifyFeedback";
-import { api, type Credential, evidenceUrl, type VerificationResult } from "@/lib/api";
-import { lookupLink } from "@/lib/lookup";
-
 import { needsReview, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type Credential, evidenceUrl, type Verification } from "@/lib/api";
- main
+import { lookupLink } from "@/lib/lookup";
 import { checkedAt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
