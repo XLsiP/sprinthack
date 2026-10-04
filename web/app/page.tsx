@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { AssociateTable, type AssociateSort } from "@/components/AssociateTable";
@@ -13,7 +14,7 @@ import { StatusBreakdownChart } from "@/components/StatusBreakdownChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, type CredentialStatus, type Stats } from "@/lib/api";
+import { api, type CredentialStatus, type Stats, type VerifyAllResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const URGENT: CredentialStatus[] = [
@@ -107,6 +108,21 @@ function ErrorBanner({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Verify all result. Hand-checked credentials are skipped by the run, so say so and point to the queue. */
+function VerifyAllMessage({ result }: { result: VerifyAllResult }) {
+  const { checked, skipped_manual: manual } = result;
+  if (manual === 0) return <>Checked {checked.toLocaleString()} credentials</>;
+  return (
+    <>
+      {checked > 0 && <>Checked {checked.toLocaleString()} automatically · </>}
+      {manual.toLocaleString()} {manual === 1 ? "is" : "are"} checked by hand ·{" "}
+      <Link href="/verify" className="font-medium text-foreground hover:underline">
+        Open Verify queue
+      </Link>
+    </>
+  );
+}
+
 export default function Dashboard() {
   const { scope, filters } = useScope();
   const queryClient = useQueryClient();
@@ -147,7 +163,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           {verifyAll.data && (
             <p className="text-sm text-muted-foreground" role="status">
-              Checked {verifyAll.data.checked.toLocaleString()} credentials
+              <VerifyAllMessage result={verifyAll.data} />
             </p>
           )}
           <Button onClick={() => verifyAll.mutate()} disabled={verifyAll.isPending}>
