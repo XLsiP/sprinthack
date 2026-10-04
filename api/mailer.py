@@ -162,3 +162,55 @@ def deliver(items: list[Item], hr_email: str) -> dict[str, int]:
 
     channels = Counter(alert.channel for alert, _ in items)
     return {"email": channels["email"], "outbox": channels["outbox"]}
+
+
+def render_credential_contact(credential: Credential, follow_up: bool, override: bool = False) -> tuple[str, str]:
+    """Subject and HTML body for an individual credential-expiry notice."""
+    app_url = os.environ.get("APP_URL", "http://localhost:3000").rstrip("/")
+    associate = escape(credential.associate.name)
+    credential_name = escape(credential.credential_type.name)
+    expires = credential.expires_date.isoformat() if credential.expires_date else "Does not expire"
+    subject = "%s: %s credential %s" % (
+        "Follow-up" if follow_up else "Credential expiring",
+        associate,
+        "requires attention" if follow_up else "is approaching expiry",
+    )
+    intended = (
+        '<p style="color:#6b7280;font-size:12px">Test delivery. Intended recipient: %s</p>'
+        % escape(credential.associate.manager_email)
+        if override else ""
+    )
+    html = (
+        '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111827">'
+        "%s"
+        "<p>Hello,</p>"
+        "<p>This is a %s regarding <strong>%s</strong>'s %s credential, which expires on %s.</p>"
+        '<p><a href="%s/associates/%d" style="color:#1d4ed8">View credential details</a></p>'
+        "<p>Credentialing Tracker</p>"
+        "</div>"
+    ) % (
+        intended,
+        "follow-up" if follow_up else "notification",
+        associate,
+        credential_name,
+        escape(expires),
+        app_url,
+        credential.associate_id,
+    )
+    return subject, html
+
+
+def deliver_credential_contact(credential: Credential, follow_up: bool) -> str:
+    """Send an individual notice or leave it in the outbox when delivery is unavailable."""
+    recipient = credential.associate.manager_email
+    override_to = os.environ.get("ALERT_EMAIL_OVERRIDE_TO", "").strip()
+    if not is_configured() or (not override_to and is_reserved(recipient)):
+        return "outbox"
+
+    subject, html = render_credential_contact(credential, follow_up, override=bool(override_to))
+    try:
+        send(override_to or recipient, subject, html)
+    except httpx.HTTPError as exc:
+        log.warning("Credential contact for %s failed and stays in the outbox: %s", recipient, type(exc).__name__)
+        return "outbox"
+    return "email"

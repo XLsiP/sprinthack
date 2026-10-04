@@ -4,9 +4,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+import mailer
 from db import Base, SessionLocal, engine
 from main import app
-from models import Alert, Associate, Credential, CredentialType, Verification
+from models import Alert, Associate, Credential, CredentialEmailContact, CredentialType, Verification
 
 
 @pytest.fixture
@@ -118,3 +119,50 @@ def test_run_requires_hr_email(client, monkeypatch):
     assert response.json()["detail"] == "HR_EMAIL must be configured to run alert sweeps"
     with SessionLocal() as db:
         assert db.scalars(select(Alert)).all() == []
+
+
+def test_email_credential_tracks_initial_and_follow_up(client, monkeypatch):
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
+    monkeypatch.setenv("ALERT_EMAIL_OVERRIDE_TO", "demo@beaconhealth.org")
+    monkeypatch.setattr(mailer, "send", lambda *_args, **_kwargs: None)
+    credential_id = add_credential("Contacted", 20)
+
+    first = client.post("/api/alerts/credential/%d/email" % credential_id)
+
+    assert first.status_code == 200
+    assert first.json()["kind"] == "initial"
+    assert first.json()["channel"] == "email"
+    credentials = client.get("/api/credentials?limit=200").json()
+    contacted = next(item for item in credentials if item["id"] == credential_id)
+    assert contacted["email_contacted"] is True
+    assert contacted["email_contact_count"] == 1
+    assert contacted["last_email_contact_channel"] == "email"
+
+    second = client.post("/api/alerts/credential/%d/email" % credential_id)
+
+    assert second.status_code == 200
+    assert second.json()["kind"] == "follow_up"
+    with SessionLocal() as db:
+        contacts = db.scalars(select(CredentialEmailContact)).all()
+        assert [contact.kind for contact in contacts] == ["initial", "follow_up"]
+        assert all(contact.sent_to == "manager@example.org" for contact in contacts)
+
+
+def test_email_credential_records_outbox_when_not_configured(client, monkeypatch):
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    credential_id = add_credential("OutboxContact", 20)
+
+    response = client.post("/api/alerts/credential/%d/email" % credential_id)
+
+    assert response.status_code == 200
+    assert response.json()["kind"] == "initial"
+    assert response.json()["channel"] == "outbox"
+
+
+def test_email_credential_rejects_missing_or_not_due_credential(client):
+    missing = client.post("/api/alerts/credential/999/email")
+    valid_id = add_credential("NotDue", 180)
+    not_due = client.post("/api/alerts/credential/%d/email" % valid_id)
+
+    assert missing.status_code == 404
+    assert not_due.status_code == 409
