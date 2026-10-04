@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ThresholdBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Alert, Credential } from "@/lib/api";
-import { sentAt } from "@/lib/format";
+import { managerName, sentAt } from "@/lib/format";
 
 /**
  * Outbox rows, one per recipient. Alerts only carry `credential_id`, so the associate and credential
@@ -55,7 +55,7 @@ export function AlertTable({ alerts, credentials }: { alerts: Alert[]; credentia
                 )}
               </TableCell>
               <TableCell>
-                {a.sent_to}
+                <span title={a.sent_to}>{managerName(a.sent_to)}</span>
                 <div className="text-xs text-muted-foreground">{a.channel === "email" ? "Emailed" : "Outbox only"}</div>
               </TableCell>
             </TableRow>

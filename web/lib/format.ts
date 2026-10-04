@@ -9,3 +9,22 @@ export function checkedAt(timestamp: string): string {
 export function sentAt(timestamp: string): string {
   return timestamp.slice(0, 16).replace("T", " ");
 }
+
+/**
+ * A readable name from a manager's email, which is all the API has: `morgan.samplemgr@…` → "Morgan Samplemgr".
+ * Short words such as `hr` are uppercased; anything that isn't an email is shown as is.
+ */
+export function managerName(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return email;
+  return email
+    .slice(0, at)
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((w) => {
+      if (w.length <= 2) return w.toUpperCase();
+      const word = w[0].toUpperCase() + w.slice(1).toLowerCase();
+      return word.startsWith("Mc") && word.length > 2 ? `Mc${word[2].toUpperCase()}${word.slice(3)}` : word;
+    })
+    .join(" ");
+}
