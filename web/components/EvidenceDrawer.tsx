@@ -7,8 +7,14 @@ import { toast } from "sonner";
 import { MockBadge, ResultBadge, StatusBadge, UnverifiedBadge } from "@/components/StatusBadge";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+alex/lookup-helper
+import { verificationFeedback } from "@/components/VerifyFeedback";
+import { api, type Credential, evidenceUrl, type VerificationResult } from "@/lib/api";
+import { lookupLink } from "@/lib/lookup";
+
 import { needsReview, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type Credential, evidenceUrl, type Verification } from "@/lib/api";
+ main
 import { checkedAt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -326,7 +332,7 @@ function DrawerBody({
         // Checked by a person at the source; the app never looks these up itself.
         c.lookup_url && (
           <SheetFooter className="items-end border-t">
-            <a href={c.lookup_url} target="_blank" rel="noreferrer" className={buttonVariants()}>
+            <a href={lookupLink(c) ?? c.lookup_url} target="_blank" rel="noreferrer" className={buttonVariants()}>
               <ExternalLink aria-hidden />
               Look up at {c.issuing_source}
             </a>

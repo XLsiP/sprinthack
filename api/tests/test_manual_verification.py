@@ -96,8 +96,14 @@ def test_mock_credentials_cannot_be_entered_by_hand():
     assert refused.status_code == 409
 
 
-def test_entering_a_michigan_license_number_lets_the_automatic_check_run(client, monkeypatch):
+def test_entering_a_michigan_license_number_lets_the_automatic_check_run(monkeypatch):
+    """With the automatic Michigan check switched on, a number entered by hand is what it searches by."""
+    import roster
     from verify import michigan_lara
+    monkeypatch.setattr(roster, "VERIFY_METHODS", {"MI_LARA": "api"})
+    Base.metadata.drop_all(engine)
+    seed.seed(reset=True, roster_path=str(FIXTURE))
+    client = TestClient(app)
     calls = []
 
     def fetch(first="", last="", number=""):

@@ -13,9 +13,16 @@ import { resultLabel, STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+ alex/lookup-helper
+import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
+import { api, type Credential } from "@/lib/api";
+import { lookupLink } from "@/lib/lookup";
+import { managerName } from "@/lib/format";
+
 import { type Feedback, needsReview, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type AssociateDetail, type Credential } from "@/lib/api";
 import { checkedAt, localDate, managerName } from "@/lib/format";
+ main
 import { cn } from "@/lib/utils";
 
 function notify({ tone, title, description }: Feedback) {
@@ -217,7 +224,7 @@ export default function AssociatePage() {
       // Checked by a person at the source; the app never looks these up itself.
       return credential.lookup_url ? (
         <a
-          href={credential.lookup_url}
+          href={lookupLink(credential) ?? credential.lookup_url}
           target="_blank"
           rel="noreferrer"
           aria-label={`Look up ${credential.credential_type} at ${credential.issuing_source}`}

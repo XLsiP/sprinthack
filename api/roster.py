@@ -20,9 +20,10 @@ STATE = "MI"
 DEPARTMENT = "Imaging"
 COLUMNS = {"first_name", "last_name", "manager", "source"}
 
-# How each source is verified. Michigan's lookup has no bot protection, so the app checks it itself.
-# ARRT, ARDMS and NMTCB put a CAPTCHA or bot challenge on their search, so a person checks those.
-VERIFY_METHODS = {"MI_LARA": "api"}
+# Sources the app checks by itself ("api") instead of a person checking them through the lookup helper.
+# None by default: every source is verified the same way, by a person, so the routine is identical
+# everywhere. A real Michigan verifier exists (verify/michigan_lara.py); {"MI_LARA": "api"} turns it on.
+VERIFY_METHODS: dict[str, str] = {}
 
 # source in the CSV -> credential type, issuing source, the role we assume, renewal period, lookup page.
 # The role is an assumption from which list a person is on; the roster itself has no job titles.
