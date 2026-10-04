@@ -120,6 +120,11 @@ const RESULT: Record<VerificationResult, { label: string; tone: keyof typeof TON
 // An "error" where the source matched several people: someone has to pick the right record.
 const NEEDS_REVIEW = { label: "Needs review", tone: "yellow", icon: UserSearch } as const;
 
+/** Text of `ResultBadge`, for places without color such as the printed credential file. */
+export function resultLabel(result: VerificationResult, needsReview = false): string {
+  return needsReview ? NEEDS_REVIEW.label : RESULT[result].label;
+}
+
 /** Outcome of one verification, in the same colors as `StatusBadge`. */
 export function ResultBadge({ result, needsReview = false }: { result: VerificationResult; needsReview?: boolean }) {
   const { label, tone, icon: Icon } = needsReview ? NEEDS_REVIEW : RESULT[result];

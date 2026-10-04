@@ -29,11 +29,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-muted/40">
+      <body className="flex min-h-full flex-col bg-muted/40 print:bg-white">
         <Providers>
           <AccessGate>
             <Header />
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 print:max-w-none print:p-0">{children}</main>
           </AccessGate>
           <Toaster theme="light" position="bottom-right" richColors />
         </Providers>
