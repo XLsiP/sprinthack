@@ -257,6 +257,13 @@ export function evidenceUrl(verificationId: number): string {
 export const api = {
   health: () => request<{ status: "ok" }>("/health"),
   access: () => request<AccessStatus>("/access"),
+  /** Whether `password` is the access password, without changing the one in use. True when none is required. */
+  checkAccess: async (password: string): Promise<boolean> => {
+    const res = await fetch(url("/access"), { headers: password ? { "X-Access-Password": password } : {} });
+    if (!res.ok) throw new ApiError(`GET /access failed (${res.status})`, res.status);
+    const status = (await res.json()) as AccessStatus;
+    return !status.required || status.granted;
+  },
   stats: (scope: Scope = {}) => request<Stats>("/stats", { ...scope }),
   filters: () => request<Filters>("/filters"),
   credentials: (params: CredentialQuery = {}) => request<Credential[]>("/credentials", { ...params }),

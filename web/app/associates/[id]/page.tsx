@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Printer, RefreshCw } from "lucide-react";
+import { ArrowLeft, Printer, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,10 +14,10 @@ import { resultLabel, STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VerifyLink } from "@/components/VerifyLink";
 import { type Feedback, needsReview, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type AssociateDetail, type Credential } from "@/lib/api";
 import { checkedAt, localDate, managerName } from "@/lib/format";
-import { lookupLink } from "@/lib/lookup";
 import { cn } from "@/lib/utils";
 
 function notify({ tone, title, description }: Feedback) {
@@ -217,19 +217,8 @@ export default function AssociatePage() {
 
   const verifyButton = (credential: Credential) => {
     if (credential.verify_method === "manual") {
-      // Checked by a person at the source; the app never looks these up itself.
-      return credential.lookup_url ? (
-        <a
-          href={lookupLink(credential) ?? credential.lookup_url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Look up ${credential.credential_type} at ${credential.issuing_source}`}
-          className={buttonVariants({ size: "sm", variant: "outline" })}
-        >
-          <ExternalLink aria-hidden />
-          <span className="max-lg:sr-only">Look up</span>
-        </a>
-      ) : null;
+      // Checked by a person at the source, on the Verify page; the app never looks these up itself.
+      return <VerifyLink credential={credential} />;
     }
     const running = verifyAll.isPending || (verifyOne.isPending && verifyOne.variables.id === credential.id);
     return (
@@ -275,14 +264,18 @@ export default function AssociatePage() {
               <p className="text-sm text-muted-foreground tabular-nums" role="status">
                 {verifiedCount} of {a.credentials.length} checked
               </p>
-              <Button
-                onClick={() => verifyAll.mutate()}
-                disabled={busy || automatic === 0}
-                title={automatic === 0 && a.credentials.length > 0 ? "These credentials are checked by hand at the source" : undefined}
-              >
-                <RefreshCw className={verifyAll.isPending ? "animate-spin" : undefined} aria-hidden />
-                {verifyAll.isPending ? "Verifying…" : "Verify now"}
-              </Button>
+              {automatic === 0 && a.credentials.length > 0 ? (
+                // Every credential is checked by hand: go to the Verify page for this person.
+                <Link href={`/verify?credential=${a.credentials[0].id}`} className={buttonVariants()}>
+                  <RefreshCw aria-hidden />
+                  Verify now
+                </Link>
+              ) : (
+                <Button onClick={() => verifyAll.mutate()} disabled={busy || automatic === 0}>
+                  <RefreshCw className={verifyAll.isPending ? "animate-spin" : undefined} aria-hidden />
+                  {verifyAll.isPending ? "Verifying…" : "Verify now"}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => window.print()}>
                 <Printer aria-hidden />
                 Print credential file

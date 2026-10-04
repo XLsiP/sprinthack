@@ -6,6 +6,7 @@ import { CredentialTable } from "@/components/CredentialTable";
 import { CredentialEmailButton } from "@/components/CredentialEmailButton";
 import { useRole } from "@/components/Providers";
 import { useScope } from "@/components/ScopeFilters";
+import { VerifyLink } from "@/components/VerifyLink";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
@@ -100,7 +101,12 @@ export default function CredentialsPage() {
               >
                 <CredentialTable
                   credentials={data.items}
-                  action={(credential) => <CredentialEmailButton credential={credential} />}
+                  action={(credential) => (
+                    <>
+                      <VerifyLink credential={credential} />
+                      <CredentialEmailButton credential={credential} />
+                    </>
+                  )}
                 />
               </div>
             )
