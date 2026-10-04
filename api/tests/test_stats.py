@@ -106,3 +106,28 @@ def test_filters_scope_every_number(client):
     assert summary(department="Emergency") == (1, 1, 1, 1, ["Epworth Hospital"])
     assert summary(facility="Beacon Kalamazoo") == (1, 3, 0, 3, ["Beacon Kalamazoo"])
     assert summary(facility="Nowhere") == (0, 0, 0, 0, [])
+
+
+def test_manager_stats_add_up_to_the_overall_counts(client):
+    add_associate(5, 400, manager="rad@example.org")
+    add_associate(-3, manager="rad@example.org", facility="Beacon Kalamazoo")
+    add_associate(200, manager="lab@example.org", department="Laboratory")
+    add_associate(manager="empty@example.org")  # a manager whose person has no credentials yet
+
+    rows = client.get("/api/stats/managers").json()
+    assert [(r["manager"], r["associates"], r["credentials"]) for r in rows] == [
+        ("empty@example.org", 1, 0), ("lab@example.org", 1, 1), ("rad@example.org", 2, 3),
+    ]
+    overall = client.get("/api/stats").json()
+    assert sum(r["associates"] for r in rows) == overall["associates"]
+    for status in SEVERITY:
+        assert sum(r["by_status"][status] for r in rows) == overall["by_status"][status]
+    assert rows[2]["by_status"]["expired"] == 1 and rows[2]["by_status"]["expiring_30"] == 1
+
+    in_kalamazoo = client.get("/api/stats/managers", params={"facility": "Beacon Kalamazoo"}).json()
+    assert [(r["manager"], r["associates"], r["credentials"]) for r in in_kalamazoo] == [("rad@example.org", 1, 1)]
+    assert client.get("/api/stats/managers", params={"department": "Nowhere"}).json() == []
+
+
+def test_manager_stats_with_no_data(client):
+    assert client.get("/api/stats/managers").json() == []

@@ -85,6 +85,7 @@ Derived credential status: `valid`, `unverified`, `expiring_90`, `expiring_60`, 
 - `POST /alerts/credential/{id}/email` (email the associate's manager about an expiring credential; follow-up attempts are recorded)
 - `GET /jobs/daily` (schedule on/off, next run, last run) · `POST /jobs/daily/run` (run the daily job now; 409 if one is already running)
 - `GET /stats?manager=&department=&facility=` (counts by status, by facility, and a timeline of expirations over the next 90 days in 13 weekly buckets)
+- `GET /stats/managers?department=&facility=` (one row per manager: associates, credentials, counts by status; for HR's overview)
 
 Backend generates OpenAPI at `/docs`. Keep `web/lib/api.ts` types in sync with `schemas.py`.
 
@@ -117,6 +118,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 - Status colors everywhere: red = expired/excluded, orange = ≤30 days, yellow = ≤90 days, green = valid, gray = not yet verified.
 - Calm, clean hospital-admin look: generous whitespace, clear hierarchy, readable tables.
 - Key screens: dashboard (urgent items first + charts), associate profile (credential timeline + "Verify now"), evidence drawer (what/when/source + PDF download).
+- The dashboard differs by role. Managers do the verifying, so theirs has the seven status tiles, charts, "Needs attention" and their associates. HR oversees, so theirs is simpler: four tiles (Problems, Expiring within 90 days, Valid, Not yet verified), a "Progress by manager" table (click a manager to narrow the page to that team), and a list of problems and credentials expiring within 30 days, then the charts.
 - Role switcher (Manager / HR) in the header for the demo instead of real auth. Manager asks which manager you are and for the access password again, then shows only that manager's team; the choice is kept in the browser. It is the one shared password, so it is not a per-manager login.
 - The Verify page has a picker (search by name, filter by source, not-yet-verified or all); the chosen credential is in the address (`/verify?credential=<id>`), which is where the "Verify" buttons on the Credentials tab and the associate profile go.
 

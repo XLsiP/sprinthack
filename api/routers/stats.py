@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from db import get_db
 from models import Associate, Credential
 from routers.deps import filter_associates
-from schemas import FacilityStats, FiltersOut, StatsOut, TimelinePoint
+from schemas import FacilityStats, FiltersOut, ManagerStats, StatsOut, TimelinePoint
 from status import SEVERITY
 
 router = APIRouter(tags=["stats"])
@@ -62,6 +62,33 @@ def stats(
             for i, n in enumerate(weeks)
         ],
     )
+
+
+@router.get("/stats/managers", response_model=list[ManagerStats])
+def manager_stats(
+    department: Optional[str] = Query(None, min_length=1, max_length=200),
+    facility: Optional[str] = Query(None, min_length=1, max_length=200),
+    db: Session = Depends(get_db),
+) -> list[ManagerStats]:
+    """Each manager's team size and credential counts by status, for HR's overview. Sorted by manager."""
+    people = dict(db.execute(
+        filter_associates(select(Associate.manager_email, func.count()), None, department, facility)
+        .group_by(Associate.manager_email)
+    ).all())
+    counts = {manager: dict.fromkeys(SEVERITY, 0) for manager in people}
+    rows = db.execute(
+        filter_associates(
+            select(Associate.manager_email, Credential.status, func.count())
+            .join(Associate, Credential.associate_id == Associate.id),
+            None, department, facility,
+        ).group_by(Associate.manager_email, Credential.status)
+    )
+    for manager, status, count in rows:
+        counts[manager][status] = count
+    return [
+        ManagerStats(manager=m, associates=people[m], credentials=sum(counts[m].values()), by_status=counts[m])
+        for m in sorted(people)
+    ]
 
 
 @router.get("/filters", response_model=FiltersOut)
