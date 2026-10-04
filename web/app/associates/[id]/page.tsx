@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type Credential } from "@/lib/api";
+import { managerName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function notify({ tone, title, description }: Feedback) {
@@ -198,7 +199,9 @@ export default function AssociatePage() {
                 </>
               )}
             </p>
-            <p className="text-sm text-muted-foreground">Reports to {a.manager_email}</p>
+            <p className="text-sm text-muted-foreground">
+              Reports to <span title={a.manager_email}>{managerName(a.manager_email)}</span>
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <p className="text-sm text-muted-foreground tabular-nums" role="status">

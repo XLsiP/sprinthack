@@ -4,6 +4,7 @@ import Link from "next/link";
 import { NoCredentialsBadge, StatusBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Associate, AssociateQuery } from "@/lib/api";
+import { managerName } from "@/lib/format";
 
 export type AssociateSort = NonNullable<AssociateQuery["sort"]>;
 
@@ -71,7 +72,9 @@ export function AssociateTable({
                 {a.role} · {a.department} · {a.facility}
               </div>
             </TableCell>
-            <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">{a.manager_email}</TableCell>
+            <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground" title={a.manager_email}>
+              {managerName(a.manager_email)}
+            </TableCell>
             <TableCell className="text-right tabular-nums">{a.credential_count}</TableCell>
             <TableCell>{a.worst_status ? <StatusBadge status={a.worst_status} /> : <NoCredentialsBadge />}</TableCell>
           </TableRow>

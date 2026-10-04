@@ -5,8 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useDemoManager, useHrScope, useRole } from "@/components/Providers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, type Scope } from "@/lib/api";
+import { managerName } from "@/lib/format";
 
 const ALL = "all";
+
+type Option = { value: string; label: string; title?: string };
 
 function Filter({
   label,
@@ -15,14 +18,15 @@ function Filter({
   onChange,
 }: {
   label: string;
-  options: string[];
+  options: Option[];
   value: string | undefined;
   onChange: (value: string | undefined) => void;
 }) {
-  const items = [{ value: ALL, label: `All ${label}` }, ...options.map((o) => ({ value: o, label: o }))];
+  const items: Option[] = [{ value: ALL, label: `All ${label}` }, ...options];
+  const picked = items.find((item) => item.value === value);
   return (
     <Select items={items} value={value ?? ALL} onValueChange={(v) => onChange(!v || v === ALL ? undefined : v)}>
-      <SelectTrigger aria-label={label} className="max-w-full min-w-44">
+      <SelectTrigger aria-label={label} title={picked?.title} className="max-w-full min-w-44">
         {/* Every label sits invisibly in the same grid cell as the value, so the trigger (and the list, which matches
             its width) fits the longest option whatever is picked; on a narrow row it shrinks and the value truncates. */}
         <span className="grid min-w-0 flex-1 overflow-hidden">
@@ -36,7 +40,7 @@ function Filter({
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false} className="max-w-(--available-width)">
         {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
+          <SelectItem key={item.value} value={item.value} title={item.title}>
             {item.label}
           </SelectItem>
         ))}
@@ -58,14 +62,17 @@ export function useScope(): { scope: Scope; filters: React.ReactNode } {
       filters: <p className="text-sm text-muted-foreground">Your team: {demo.team}</p>,
     };
   }
+  const plain = (values: string[] = []): Option[] => values.map((v) => ({ value: v, label: v }));
+  // Managers are filtered by email (all the API has) but shown by name, with the email on hover.
+  const managers = (options.data?.managers ?? []).map((m) => ({ value: m, label: managerName(m), title: m }));
   const set = (key: keyof Scope) => (value: string | undefined) => setPicked((p) => ({ ...p, [key]: value }));
   return {
     scope: picked,
     filters: (
       <div className="flex flex-wrap gap-2">
-        <Filter label="facilities" options={options.data?.facilities ?? []} value={picked.facility} onChange={set("facility")} />
-        <Filter label="departments" options={options.data?.departments ?? []} value={picked.department} onChange={set("department")} />
-        <Filter label="managers" options={options.data?.managers ?? []} value={picked.manager} onChange={set("manager")} />
+        <Filter label="facilities" options={plain(options.data?.facilities)} value={picked.facility} onChange={set("facility")} />
+        <Filter label="departments" options={plain(options.data?.departments)} value={picked.department} onChange={set("department")} />
+        <Filter label="managers" options={managers} value={picked.manager} onChange={set("manager")} />
       </div>
     ),
   };
