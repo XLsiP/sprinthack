@@ -7,17 +7,32 @@ tracker's form. You check it and click **Save and next**.
 
 ## What happens on each site
 
-| Source | When you click Open lookup | What you do on the site | What is filled in for you |
-| --- | --- | --- | --- |
-| ARRT | The search page opens with the last and first name filled in | Tick "I'm not a robot", press Search, press **View Details** on the person | Expiry date (ARRT shows month and year, so the last day of that month) |
-| ARDMS | The person's result opens | Nothing | Expiry date (the earliest, if they hold several credentials) |
-| NMTCB | The person's result opens | Nothing | Expiry date |
-| Michigan license | The lookup page opens, the name is filled in and the search runs | Nothing | License number and expiry date |
+| Source | When you click Open lookup | What you do on the site |
+| --- | --- | --- |
+| ARRT | The search page opens with the last and first name filled in | Tick "I'm not a robot", press Search, press **View Details** on the person |
+| ARDMS | The person's result opens | Nothing |
+| NMTCB | The person's result opens | Nothing |
+| Michigan license | The lookup page opens, the name is filled in and the search runs | Nothing |
 
-Then go back to the tracker tab. The form shows what was read, with a note saying which page it came
-from. Check it against the page and click **Save and next**.
+Then go back to the tracker tab. The form shows what was read. Check it against the page and click
+**Save and next**.
 
-Only Michigan shows a number; ARRT, ARDMS and NMTCB do not show one on their result pages.
+## What is filled in
+
+| Box on the form | ARRT | ARDMS | NMTCB | Michigan |
+| --- | --- | --- | --- | --- |
+| Credentials held | Credentials line, e.g. R.T.(R)(CT)(ARRT) | Each credential with its specialties | Certifications held | License type |
+| Status at source | A sanction heading, if any | Active or other | ACTIVE or other | License status |
+| Credential or ID number | not shown | not shown | not shown | License number |
+| Issued on | not shown | Earliest "Valid from" | not shown | License issue date |
+| Expires on | Valid Thru (last day of that month) | Earliest "Valid until" | Certified through | Expiration date |
+| Also on the page | Location, country, valid thru, credential description, CE Biennium, CQR periods | Country, one line per credential | Location, certified through, "accurate as of" date | County, dates as shown |
+
+"Also on the page" is a list under the boxes, in the site's own words. It is saved with the record
+and appears in the evidence drawer and the evidence PDF. The Note box is left for your own remarks.
+
+The location the sites show (city, state, zip, county) is recorded too. It is personal information
+about real staff, which is one more reason the repo stays private and every deployment has a password.
 
 When the helper cannot fill the form:
 
@@ -39,8 +54,8 @@ When the helper cannot fill the form:
   `aca-prod.accela.com/MILARA`, and the tracker itself (`localhost:3000` and `sprinthack-*.vercel.app`).
 - The name travels in the part of the link after `#`, which browsers never send to the website.
 - The one permission it asks for, `storage`, is how the result gets from the lookup tab to the
-  tracker tab. What it keeps there is the latest result only: the dates and credential text, and the
-  tracker's row number. No names. Nothing is sent anywhere else.
+  tracker tab. What it keeps there is the latest result only: what the page showed (credentials,
+  status, dates, location) and the tracker's row number. No names. Nothing is sent anywhere else.
 
 ## Install (Chrome or Edge)
 

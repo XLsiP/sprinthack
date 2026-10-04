@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Credentialing Tracker helper",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "For credential lookup pages (ARRT, ARDMS, NMTCB, Michigan license) opened from the Credentialing Tracker: fills in the person's name and reads the result back into the tracker for you to check. You complete any \"I'm not a robot\" check yourself.",
   "permissions": ["storage"],
   "content_scripts": [

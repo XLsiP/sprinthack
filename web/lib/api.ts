@@ -88,7 +88,11 @@ export interface ManualVerification {
   result: "verified" | "not_found";
   number?: string;
   expires_date?: string;
+  issued_date?: string;
   note?: string;
+  credentials_held?: string; // as the source writes them, e.g. R.T.(R)(CT)(ARRT)
+  source_status?: string;
+  source_details?: Record<string, string>; // anything else the source page shows, by its label there
 }
 
 export interface VerifyAllResult {

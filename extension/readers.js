@@ -6,9 +6,11 @@
 //   { open: url }        one person matched; go to their page
 //   { several: true }    several people matched; the person at the keyboard picks one
 //   { none: true }       the site says nobody matched
-//   { name, expires, number, summary, hint? }   what the page shows. `expires` is YYYY-MM-DD or
-//                        null; `number` is null where the site shows none (ARRT, ARDMS, NMTCB).
-//                        `name` is only compared with the person looked up, then dropped.
+//   { name, credentials, status, number, issued, expires, extra, hint? }   what the page shows.
+//       `issued` and `expires` are YYYY-MM-DD or null. A site that does not show a value gives
+//       null (only Michigan shows a number). `extra` is everything else on the page, as
+//       [label, value] pairs in the site's own words. `name` is only compared with the person
+//       looked up, then dropped.
 // Nothing read here is saved by itself: the tracker shows it for the person to check first.
 // If a site changes its page, this is the file to edit.
 const BCT_READERS = (() => {
@@ -18,6 +20,9 @@ const BCT_READERS = (() => {
   const pad = (n) => String(n).padStart(2, "0");
   const iso = (year, month, day) => (month >= 1 && month <= 12 ? `${year}-${pad(month)}-${pad(day)}` : null);
   const earliest = (dates) => dates.filter(Boolean).sort()[0] || null;
+  const unique = (values) => [...new Set(values.filter(Boolean))];
+  /** [label, value] pairs with the empty ones dropped. */
+  const pairs = (list) => list.filter(([label, value]) => label && value);
 
   /** 07/31/2027 */
   function usDate(text) {
@@ -46,19 +51,36 @@ const BCT_READERS = (() => {
     for (const tr of body.querySelectorAll("table.table-condensed > tbody > tr")) {
       const th = tr.querySelector(":scope > th");
       const td = tr.querySelector(":scope > td");
-      if (th && td) rows[clean(th.textContent)] = clean(td.textContent);
+      if (!th || !td) continue;
+      // A value can be a small table of its own (the CQR periods): one line per row.
+      const lines = [...td.querySelectorAll("tr")].map((row) => clean(row.textContent)).filter(Boolean);
+      rows[clean(th.textContent)] = lines.length ? lines.join("; ") : clean(td.textContent);
     }
     const credentials = rows["Credentials"];
     const validThru = rows["Valid Thru"];
     // A sanction or a lapsed registration is shown as a heading in the box.
     const headings = [...body.querySelectorAll("h3")].filter((h) => h.offsetParent !== null).map((h) => clean(h.textContent));
     if (!credentials && !validThru && !headings.length) return null;
+    // "(R) Radiography", one row per credential, in the table under the "Credential Description" title.
+    const title = [...body.querySelectorAll("b, strong")].find((el) => /^credential description$/i.test(clean(el.textContent)));
+    const described = title && title.nextElementSibling && title.nextElementSibling.matches("table")
+      ? [...title.nextElementSibling.querySelectorAll("tr")].map((row) => clean(row.textContent)).filter(Boolean).join("; ")
+      : "";
     const expires = monthEnd(validThru);
+    const shown = new Set(["Name", "Credentials", "Valid Thru", "City, State, Zip"]);
     return {
       name: rows["Name"],
-      expires,
+      credentials: credentials || null,
+      status: headings.join(", ") || null,
       number: null,
-      summary: [credentials, validThru && `valid thru ${validThru}`, ...headings].filter(Boolean).join(", "),
+      issued: null,
+      expires,
+      extra: pairs([
+        ["Location", rows["City, State, Zip"]],
+        ["Valid thru", validThru],
+        ["Credential description", described],
+        ...Object.entries(rows).filter(([label]) => !shown.has(label)),
+      ]),
       hint: expires ? "ARRT shows only the month and year, so the last day of that month is filled in." : undefined,
     };
   }
@@ -76,19 +98,33 @@ const BCT_READERS = (() => {
     const rows = [...table.querySelectorAll("tbody tr")].map((tr) => {
       const cells = [...tr.querySelectorAll("td")].map((td) => clean(td.textContent));
       const cell = (name) => cells[heads.indexOf(name)] || "";
-      return { credential: cell("credential"), specialty: cell("specialty"), until: cell("valid until"), status: cell("status") };
+      return { credential: cell("credential"), specialty: cell("specialty"), from: cell("valid from"), until: cell("valid until"), status: cell("status") };
     });
     if (!rows.length) return null;
     const active = rows.filter((r) => /^active$/i.test(r.status));
     const heading = people[0].querySelector("h6");
+    const country = heading && heading.querySelector("span");
     return {
       name: heading && heading.firstChild ? clean(heading.firstChild.textContent) : "",
+      // "Registered Diagnostic Medical Sonographer (AB, OBGYN)"
+      credentials: unique(rows.map((r) => r.credential))
+        .map((credential) => {
+          const specialties = unique(rows.filter((r) => r.credential === credential).map((r) => r.specialty));
+          return specialties.length ? `${credential} (${specialties.join(", ")})` : credential;
+        })
+        .join("; ") || null,
+      status: unique(rows.map((r) => r.status)).join(", ") || null,
+      number: null,
+      issued: earliest(rows.map((r) => longDate(r.from))),
       // With several credentials, the one that runs out first is the date to track.
       expires: earliest((active.length ? active : rows).map((r) => longDate(r.until))),
-      number: null,
-      summary: rows
-        .map((r) => `${r.credential}${r.specialty ? ` (${r.specialty})` : ""}: ${r.status || "no status"}${r.until ? ` until ${r.until}` : ""}`)
-        .join("; "),
+      extra: pairs([
+        ["Country", country && clean(country.textContent)],
+        ...rows.map((r, i) => [
+          `${i + 1}. ${[r.credential, r.specialty].filter(Boolean).join(", ")}`.slice(0, 60),
+          [r.from && `valid from ${r.from}`, r.until && `until ${r.until}`, r.status].filter(Boolean).join(", "),
+        ]),
+      ]),
     };
   }
 
@@ -106,12 +142,21 @@ const BCT_READERS = (() => {
       const dates = through
         ? [...through.querySelectorAll("time")].map((t) => (/^\d{4}-\d{2}-\d{2}$/.test(t.dateTime) ? t.dateTime : usDate(t.textContent)))
         : [];
-      const status = clean((blocks["current status"] || blocks["certifications held"] || {}).textContent);
+      const value = (title) => clean((blocks[title] || {}).textContent);
+      // The site states the day its information was accurate, under the card.
+      const asOf = /information as of:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(clean(doc.body.textContent));
       return {
-        name: clean((blocks["name"] || {}).textContent),
-        expires: earliest(dates),
+        name: value("name"),
+        credentials: value("certifications held") || null,
+        status: value("current status") || null,
         number: null,
-        summary: [status, through && `certified through ${clean(through.textContent)}`].filter(Boolean).join(", "),
+        issued: null,
+        expires: earliest(dates),
+        extra: pairs([
+          ["Location", value("address")],
+          ["Certified through", value("certified through")],
+          ["Accurate as of", asOf && asOf[1]],
+        ]),
       };
     }
     if (!/^\/verification\/results/i.test(where.pathname)) return null;
@@ -131,13 +176,17 @@ const BCT_READERS = (() => {
       const field = (label, stop) => clean((new RegExp(`${label}:\\s*(.*?)\\s*${stop}:`).exec(text) || [])[1]);
       const number = field("License Number", "Name");
       if (!number) return null;
-      const status = field("License Status", "County");
+      const issued = field("License Issue Date", "License Expiration Date");
       const until = field("License Expiration Date", "License Status");
+      const county = clean((/County:\s*(.*?)\s*(?:Related Records|Listed below|$)/.exec(text) || [])[1]);
       return {
         name: field("Name", "License Issue Date"),
-        expires: usDate(until),
+        credentials: field("License Type", "License Number") || null,
+        status: field("License Status", "County") || null,
         number,
-        summary: [field("License Type", "License Number"), status, until && `expires ${until}`].filter(Boolean).join(", "),
+        issued: usDate(issued),
+        expires: usDate(until),
+        extra: pairs([["County", county], ["License issue date", issued], ["License expiration date", until]]),
       };
     }
     const rows = [...doc.querySelectorAll("tr.ACA_TabRow_Odd, tr.ACA_TabRow_Even")]
@@ -148,9 +197,12 @@ const BCT_READERS = (() => {
       const [type, license, a, b, c, , , status, until] = rows[0];
       return {
         name: [a, b, c].filter(Boolean).join(" "),
-        expires: usDate(until),
+        credentials: type || null,
+        status: status || null,
         number: license || null,
-        summary: [type, status, until && `expires ${until}`].filter(Boolean).join(", "),
+        issued: null,
+        expires: usDate(until),
+        extra: pairs([["License expiration date", until]]),
       };
     }
     return /Your search returned no results/i.test(text) ? { none: true } : null;

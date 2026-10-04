@@ -55,6 +55,8 @@ def is_manual(credential: Credential) -> bool:
 def record_manual(
     db: Session, credential: Credential, result: str, number: Optional[str] = None,
     expires_date: Optional[date] = None, issued_date: Optional[date] = None, note: Optional[str] = None,
+    credentials_held: Optional[str] = None, source_status: Optional[str] = None,
+    source_details: Optional[dict[str, str]] = None,
 ) -> Verification:
     """Record a lookup a person did at the source, and update the credential from what they saw."""
     details: dict = {"entered_by_hand": True}
@@ -69,6 +71,14 @@ def record_manual(
             "number": credential.number,
             "expires_date": credential.expires_date.isoformat() if credential.expires_date else None,
         })
+        # The rest of what the source page showed, kept as evidence. Only added when given.
+        if issued_date:
+            details["issued_date"] = issued_date.isoformat()
+        if credentials_held and credentials_held.strip():
+            details["credentials_held"] = credentials_held.strip()
+        if source_status and source_status.strip():
+            details["source_status"] = source_status.strip()
+        details.update(source_details or {})
     else:
         details["reason"] = "Not found at the source when checked by hand"
     if note:
