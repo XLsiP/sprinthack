@@ -213,6 +213,13 @@ class FacilityStats(BaseModel):
     by_status: dict[str, int]
 
 
+class ManagerStats(BaseModel):
+    manager: str  # the manager's email
+    associates: int
+    credentials: int
+    by_status: dict[str, int]
+
+
 class TimelinePoint(BaseModel):
     start: date  # first and last day of the week, both inclusive
     end: date

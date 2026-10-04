@@ -66,6 +66,14 @@ export interface AssociateDetail extends Associate {
   credentials: Credential[];
 }
 
+/** One manager's team, for HR's overview. */
+export interface ManagerStats {
+  manager: string; // the manager's email
+  associates: number;
+  credentials: number;
+  by_status: Record<CredentialStatus, number>;
+}
+
 export interface Stats {
   associates: number;
   credentials: number;
@@ -265,6 +273,8 @@ export const api = {
     return !status.required || status.granted;
   },
   stats: (scope: Scope = {}) => request<Stats>("/stats", { ...scope }),
+  managerStats: (scope: Pick<Scope, "department" | "facility"> = {}) =>
+    request<ManagerStats[]>("/stats/managers", { department: scope.department, facility: scope.facility }),
   filters: () => request<Filters>("/filters"),
   credentials: (params: CredentialQuery = {}) => request<Credential[]>("/credentials", { ...params }),
   credentialsPage: (params: CredentialQuery = {}) => page<Credential>("/credentials", { ...params }),
