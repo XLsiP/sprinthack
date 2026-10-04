@@ -20,7 +20,7 @@ export function Header() {
   const pathname = usePathname();
   const { role } = useRole();
   return (
-    <header className="border-b bg-background">
+    <header className="border-b bg-background print:hidden">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <ShieldCheck className="size-5 text-primary" aria-hidden />

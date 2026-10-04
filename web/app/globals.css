@@ -128,3 +128,20 @@
     @apply font-sans;
   }
 }
+
+/* Printed credential file (associate profile): one letter page, black on white. */
+@page {
+  size: letter;
+  margin: 0.6in;
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  /* Toasts render in a portal outside the page, so they are hidden here rather than with print:hidden. */
+  [data-sonner-toaster] {
+    display: none;
+  }
+}

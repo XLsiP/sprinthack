@@ -1,8 +1,14 @@
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** A date as local `YYYY-MM-DD`. */
+export function localDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /** API timestamps are UTC without a zone; show them as local `YYYY-MM-DD HH:MM`. */
 export function checkedAt(timestamp: string): string {
   const d = new Date(`${timestamp}Z`);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${localDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /** Alert `sent_at` is the API server's local time without a zone (unlike `checked_at`); show it unconverted. */
