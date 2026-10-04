@@ -53,7 +53,7 @@ Hackathon project (2-day Innovation Sprint) for Beacon Health System (South Bend
   scheduler.py            # APScheduler jobs
   seed.py                 # synthetic data generator
 /design/refs/             # screenshot references for UI
-/extension                # Chrome helper for the lookup sites: fills in the name on ARRT and Michigan (see its README)
+/extension                # Chrome helper for the lookup sites: fills in the name, reads the result back into the Verify form (see its README)
 ```
 
 ## Data model
@@ -123,7 +123,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 - **The app's data is a real staff roster**, `api/rosters/kzo.csv` (Beacon Kalamazoo imaging: names, managers, and which source verifies each credential). It contains real names, so **this repo must stay private** and every deployment must set `ACCESS_PASSWORD`.
 - **Nothing is invented about real people.** Roster credentials have no number, dates or verification and start `unverified`. Dates and results only come from a real lookup. Roles are assumed from which list a person is on, and manager emails are `first.last@example.org` placeholders, because the roster has neither.
 - No PHI, and no NPIs for roster people.
-- **Every roster credential is verified the same way: by a person** (`verify_method="manual"`), through the `/verify` queue. "Open lookup" takes them to the source: ARDMS and NMTCB links open on the person's result; on ARRT and Michigan the helper in `/extension` fills in the name (and runs the search on Michigan, which has no robot check). The person then records the number and expiry date. Mock verifiers never run on roster credentials.
+- **Every roster credential is verified the same way: by a person** (`verify_method="manual"`), through the `/verify` queue. "Open lookup" takes them to the source: ARDMS and NMTCB links open on the person's result; on ARRT and Michigan the helper in `/extension` fills in the name (and runs the search on Michigan, which has no robot check). The helper then reads the expiry date (and, on Michigan, the license number) off the result page and pre-fills the form; the person checks it and saves. The helper never saves anything itself. Mock verifiers never run on roster credentials.
 - A real automatic Michigan verifier exists (`api/verify/michigan_lara.py`) but is switched off so all sources behave alike; `VERIFY_METHODS` in `api/roster.py` turns it on. ARRT requires a CAPTCHA on every search and must not be automated.
 - A name search can match several people, so nothing is ever picked automatically for a real person. Tests must not call the live lookup sites (`conftest.py` blocks the Michigan one).
 - `python seed.py --reset` loads the roster. `--synthetic` (or `SEED_SYNTHETIC=1`) generates 1,500 invented associates instead, with a 60-person radiology team and a mix of statuses; the tests use this and must never contain real names (`api/tests/fixtures/roster.csv` is invented). `--roster <csv>` or `ROSTER_FILE` loads a different roster: columns `first_name, last_name, manager, source`, with `source` one of `ARRT`, `ARDMS`, `NMTCB`, `MI_LARA` (see `api/roster.py`).

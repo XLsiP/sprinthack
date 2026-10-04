@@ -1,16 +1,18 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, ExternalLink, SkipForward } from "lucide-react";
+import { CircleCheck, ExternalLink, ScanText, SkipForward } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useDemoManager, useRole } from "@/components/Providers";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Credential, type ManualVerification } from "@/lib/api";
+import { type HelperResult, listenForHelper } from "@/lib/helper";
 import { lookupLink } from "@/lib/lookup";
+import { cn } from "@/lib/utils";
 
 const FIELD =
   "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -19,6 +21,18 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
   const [number, setNumber] = useState("");
   const [expires, setExpires] = useState("");
   const [note, setNote] = useState("");
+  const [read, setRead] = useState<HelperResult | null>(null);
+  // The helper extension reads the result off the lookup page; fill the form with it for the person to check.
+  useEffect(
+    () =>
+      listenForHelper(credential.id, (result) => {
+        setRead(result);
+        if (result.expires) setExpires(result.expires);
+        if (result.number) setNumber(result.number);
+        if (result.summary) setNote(`${result.source} page showed: ${result.summary}`.slice(0, 500));
+      }),
+    [credential.id],
+  );
   const save = useMutation({
     mutationFn: (body: ManualVerification) => api.recordManualVerification(credential.id, body),
     onSuccess: (verification) => {
@@ -69,6 +83,28 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
           }}
         >
           <p className="text-sm font-medium">2. Record what it shows</p>
+          {read && (
+            <div
+              role="status"
+              className={cn("flex gap-2 rounded-lg border bg-muted/50 p-3 text-sm", read.mismatch && "border-orange-300 bg-orange-50")}
+            >
+              <ScanText aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <p>
+                {read.none
+                  ? `The ${read.source} page showed no match. Try another spelling there first; if there is still none, choose "Not found at source".`
+                  : read.expires
+                    ? `Filled in from the ${read.source} page. Check it against the page, then save.`
+                    : `The ${read.source} page showed no expiry date. Enter it yourself if there is one.`}
+                {read.mismatch && (
+                  <span className="font-medium">
+                    {" "}
+                    The name on that page did not look like {credential.associate_name}; make sure it is the right person.
+                  </span>
+                )}
+                {read.hint && <span className="text-muted-foreground"> {read.hint}</span>}
+              </p>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-sm">
               <span>Credential or ID number</span>
