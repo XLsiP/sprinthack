@@ -3,10 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, ExternalLink, ScanText, SkipForward } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { useDemoManager, useRole } from "@/components/Providers";
+import { useRole } from "@/components/Providers";
+import { useScope } from "@/components/ScopeFilters";
+import { type Show, VerifyPicker } from "@/components/VerifyPicker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Credential, type ManualVerification } from "@/lib/api";
@@ -20,9 +23,10 @@ const FIELD =
 function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDone: () => void; onSkip: () => void }) {
   const [held, setHeld] = useState("");
   const [sourceStatus, setSourceStatus] = useState("");
-  const [number, setNumber] = useState("");
-  const [issued, setIssued] = useState("");
-  const [expires, setExpires] = useState("");
+  // A credential verified before starts from what is on file, so a renewal only needs the new date.
+  const [number, setNumber] = useState(credential.number ?? "");
+  const [issued, setIssued] = useState(credential.issued_date ?? "");
+  const [expires, setExpires] = useState(credential.expires_date ?? "");
   const [note, setNote] = useState("");
   const [read, setRead] = useState<HelperResult | null>(null);
   // The helper extension reads the result off the lookup page; fill the form with it for the person to check.
@@ -184,31 +188,54 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
   );
 }
 
-export default function VerifyQueuePage() {
+function VerifyQueue() {
   const { role } = useRole();
-  const { manager, team } = useDemoManager();
+  const { scope, filters } = useScope();
   const queryClient = useQueryClient();
-  const scope = role === "manager" ? { manager } : {};
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
   const queue = useQuery({
     queryKey: ["credentials", "verify-queue", scope],
-    queryFn: () => api.allCredentials({ ...scope, status: ["unverified"] }),
+    queryFn: () => api.allCredentials(scope),
   });
-  const [skipped, setSkipped] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const [source, setSource] = useState<string | null>(null);
+  const [show, setShow] = useState<Show>("unverified");
 
   // Hand-verified credentials only; the app checks the others itself.
-  const waiting = (queue.data ?? []).filter((c) => c.verify_method === "manual");
-  const current = waiting.find((c) => !skipped.includes(c.id)) ?? waiting[0];
+  const manual = (queue.data ?? []).filter((c) => c.verify_method === "manual");
+  const left = manual.filter((c) => c.status === "unverified").length;
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const listed = manual.filter(
+    (c) =>
+      (show === "all" || c.status === "unverified") &&
+      (!source || c.issuing_source === source) &&
+      words.every((word) => c.associate_name.toLowerCase().includes(word)),
+  );
+
+  // The credential in the address (a pick from the list, or a link from another page) wins; otherwise the first listed.
+  const wanted = Number(params.get("credential")) || null;
+  const current = wanted ? manual.find((c) => c.id === wanted) : listed[0];
+  const pick = (id: number | null) => router.replace(id ? `${pathname}?credential=${id}` : pathname, { scroll: false });
+  /** The listed credential after the current one, wrapping round; null when there is no other. */
+  const next = (): number | null => {
+    const others = listed.filter((c) => c.id !== current?.id);
+    if (!others.length) return null;
+    const at = listed.findIndex((c) => c.id === current?.id);
+    return (listed.slice(at + 1).find((c) => c.id !== current?.id) ?? others[0]).id;
+  };
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Verify credentials</h1>
         <p className="text-sm text-muted-foreground">
-          {role === "manager" ? `Your team: ${team}. ` : "All teams. "}
           These sources block automated lookups, so a person checks each one. Once the expiry date is recorded, the
           app tracks it and sends the alerts.
         </p>
       </div>
+      {filters}
 
       {queue.error && (
         <p role="alert" className="text-sm text-red-800">
@@ -218,16 +245,46 @@ export default function VerifyQueuePage() {
       {queue.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
 
       {queue.data && (
-        <p className="text-sm tabular-nums" role="status">
-          <span className="font-medium">{waiting.length}</span> left to verify
-        </p>
+        <>
+          <p className="text-sm tabular-nums" role="status">
+            <span className="font-medium">{left}</span> left to verify
+            {role === "manager" ? " on your team" : ""}
+          </p>
+          <VerifyPicker
+            credentials={manual}
+            listed={listed}
+            currentId={current?.id ?? null}
+            onPick={pick}
+            search={search}
+            onSearch={setSearch}
+            source={source}
+            onSource={setSource}
+            show={show}
+            onShow={setShow}
+          />
+        </>
       )}
 
-      {queue.data && !current && (
+      {queue.data && wanted && !current && (
+        <Card>
+          <CardContent>
+            <div className="space-y-1 py-8 text-center text-sm">
+              <p className="font-medium">That credential isn&apos;t in this view.</p>
+              <p className="text-muted-foreground">
+                It may be on another team, or be one the app checks by itself. Choose someone from the list above.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {queue.data && !wanted && !current && (
         <Card>
           <CardContent>
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Nothing left to verify by hand. New people and renewals will appear here.
+              {manual.length && (left || show === "all")
+                ? "Nobody matches. Clear the search or the filters above."
+                : "Nothing left to verify by hand. New people and renewals will appear here."}
             </p>
           </CardContent>
         </Card>
@@ -237,10 +294,22 @@ export default function VerifyQueuePage() {
         <Recorder
           key={current.id}
           credential={current}
-          onDone={() => queryClient.invalidateQueries()}
-          onSkip={() => setSkipped((ids) => (ids.includes(current.id) ? [] : [...ids, current.id]))}
+          onDone={() => {
+            pick(next());
+            queryClient.invalidateQueries();
+          }}
+          onSkip={() => pick(next())}
         />
       )}
     </div>
+  );
+}
+
+export default function VerifyQueuePage() {
+  // The chosen credential is read from the address, which is only known in the browser.
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <VerifyQueue />
+    </Suspense>
   );
 }

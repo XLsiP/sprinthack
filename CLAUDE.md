@@ -116,7 +116,8 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 - Status colors everywhere: red = expired/excluded, orange = ≤30 days, yellow = ≤90 days, green = valid, gray = not yet verified.
 - Calm, clean hospital-admin look: generous whitespace, clear hierarchy, readable tables.
 - Key screens: dashboard (urgent items first + charts), associate profile (credential timeline + "Verify now"), evidence drawer (what/when/source + PDF download).
-- Role switcher (Manager / HR) in the header for the demo instead of real auth.
+- Role switcher (Manager / HR) in the header for the demo instead of real auth. Manager asks which manager you are and for the access password again, then shows only that manager's team; the choice is kept in the browser. It is the one shared password, so it is not a per-manager login.
+- The Verify page has a picker (search by name, filter by source, not-yet-verified or all); the chosen credential is in the address (`/verify?credential=<id>`), which is where the "Verify" buttons on the Credentials tab and the associate profile go.
 
 ## Data rules
 
