@@ -80,6 +80,7 @@ Derived credential status: `valid`, `unverified`, `expiring_90`, `expiring_60`, 
 - `POST /verify/credential/{id}/manual` (record a lookup a person did at the source: `result` `verified` or `not_found`, plus `number`, `expires_date`, `note`; the `/verify` page in the web app is the queue for these)
 - `GET /evidence/{verification_id}.pdf`
 - `GET /alerts` · `POST /alerts/run` (manual alert sweep for the demo)
+- `POST /alerts/credential/{id}/email` (email the associate's manager about an expiring credential; follow-up attempts are recorded)
 - `GET /jobs/daily` (schedule on/off, next run, last run) · `POST /jobs/daily/run` (run the daily job now; 409 if one is already running)
 - `GET /stats?manager=&department=&facility=` (counts by status, by facility, and a timeline of expirations over the next 90 days in 13 weekly buckets)
 
@@ -100,6 +101,7 @@ Mocks must look realistic (short delay, outcomes driven by seed data) and be cle
 
 - Thresholds: 90, 60, 30 days before expiry, on expiry, and immediately on an OIG exclusion.
 - Recipients: the associate's manager and HR. Never send the same threshold twice for one credential.
+- Managers and HR can send an individual credential-expiry notice to the associate's manager from the credential and alert lists. The first recorded contact is an email; subsequent contacts are follow-ups. Attempts are retained in `credential_email_contacts`, including outbox-only attempts.
 - The daily job (`api/scheduler.py`) re-verifies every credential, which refreshes each stored status, then runs the alert sweep. It runs at 06:00 Eastern by default; configure with `DAILY_JOB_HOUR`, `DAILY_JOB_MINUTE`, `SCHEDULER_TIMEZONE`, and turn the schedule off with `SCHEDULER_ENABLED=0`. Without `HR_EMAIL` it still re-verifies but skips the sweep.
 - Email (`api/mailer.py`): with `RESEND_API_KEY` set, each recipient gets one HTML digest per sweep and those alert rows become `channel="email"`; otherwise, or if a send fails, they stay `channel="outbox"`. Reserved test addresses such as `@example.org` (all seed data) are never emailed unless `ALERT_EMAIL_OVERRIDE_TO` redirects every digest to one real inbox. `ALERT_EMAIL_MAX_PER_RUN` (default 10) caps emails per sweep, HR first; `ALERT_EMAIL_FROM` and `APP_URL` set the sender and the link base.
 - `ACCESS_PASSWORD` (optional) puts a shared password on the API: sent as the `X-Access-Password` header, or `?access=` for links such as evidence PDFs. `GET /access` reports whether one is required. Unset means open, as in local development.

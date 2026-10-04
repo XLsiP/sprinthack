@@ -5,6 +5,7 @@ import { RefreshCw, X } from "lucide-react";
 import { useState } from "react";
 
 import { AssociateTable, type AssociateSort } from "@/components/AssociateTable";
+import { CredentialEmailButton } from "@/components/CredentialEmailButton";
 import { CredentialTable } from "@/components/CredentialTable";
 import { ExpiryTimelineChart } from "@/components/ExpiryTimelineChart";
 import { useScope } from "@/components/ScopeFilters";
@@ -203,7 +204,10 @@ export default function Dashboard() {
               // facility names) is wider than the card even at 100%, so let the associate's department line and the
               // Credential, Expires and Last verified cells (2nd, 4th, 6th) wrap when space runs out; Evidence then fits.
               <div className="[&_td:nth-child(1)_div]:whitespace-normal [&_td:nth-child(2)]:whitespace-normal [&_td:nth-child(4)]:whitespace-normal [&_td:nth-child(6)]:whitespace-normal">
-                <CredentialTable credentials={urgent.data} />
+                <CredentialTable
+                  credentials={urgent.data}
+                  action={(credential) => <CredentialEmailButton credential={credential} />}
+                />
               </div>
             )
           ) : urgent.error ? (

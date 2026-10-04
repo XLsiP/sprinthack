@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CredentialEmailButton } from "@/components/CredentialEmailButton";
 import { ThresholdBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Alert, Credential } from "@/lib/api";
@@ -19,6 +20,7 @@ export function AlertTable({ alerts, credentials }: { alerts: Alert[]; credentia
           <TableHead>Associate</TableHead>
           <TableHead>Credential</TableHead>
           <TableHead>Recipient</TableHead>
+          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -57,6 +59,9 @@ export function AlertTable({ alerts, credentials }: { alerts: Alert[]; credentia
               <TableCell>
                 {a.sent_to}
                 <div className="text-xs text-muted-foreground">{a.channel === "email" ? "Emailed" : "Outbox only"}</div>
+              </TableCell>
+              <TableCell>
+                {c && a.sent_to === c.manager_email && <CredentialEmailButton credential={c} />}
               </TableCell>
             </TableRow>
           );

@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { CredentialTable } from "@/components/CredentialTable";
+import { CredentialEmailButton } from "@/components/CredentialEmailButton";
 import { useRole } from "@/components/Providers";
 import { useScope } from "@/components/ScopeFilters";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,7 +98,10 @@ export default function CredentialsPage() {
                 )}
                 aria-busy={credentials.isFetching}
               >
-                <CredentialTable credentials={data.items} />
+                <CredentialTable
+                  credentials={data.items}
+                  action={(credential) => <CredentialEmailButton credential={credential} />}
+                />
               </div>
             )
           ) : credentials.error ? (

@@ -66,6 +66,11 @@ class Credential(Base):
         back_populates="credential", cascade="all, delete-orphan", order_by="Verification.checked_at"
     )
     alerts: Mapped[list[Alert]] = relationship(cascade="all, delete-orphan")
+    email_contacts: Mapped[list[CredentialEmailContact]] = relationship(
+        back_populates="credential",
+        cascade="all, delete-orphan",
+        order_by="CredentialEmailContact.sent_at",
+    )
 
 
 class Verification(Base):
@@ -91,3 +96,16 @@ class Alert(Base):
     sent_to: Mapped[str]
     sent_at: Mapped[datetime]
     channel: Mapped[str]
+
+
+class CredentialEmailContact(Base):
+    __tablename__ = "credential_email_contacts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    credential_id: Mapped[int] = mapped_column(ForeignKey("credentials.id"), index=True)
+    kind: Mapped[str]  # initial | follow_up
+    sent_to: Mapped[str]
+    sent_at: Mapped[datetime]
+    channel: Mapped[str]  # email | outbox
+
+    credential: Mapped[Credential] = relationship(back_populates="email_contacts")

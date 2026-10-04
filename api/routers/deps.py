@@ -11,6 +11,7 @@ CREDENTIAL_LOAD = (
     selectinload(Credential.associate),
     selectinload(Credential.credential_type),
     selectinload(Credential.verifications),
+    selectinload(Credential.email_contacts),
 )
 URGENCY = case({s: i for i, s in enumerate(SEVERITY)}, value=Credential.status)
 

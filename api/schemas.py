@@ -40,6 +40,7 @@ class CredentialOut(BaseModel):
     id: int
     associate_id: int
     associate_name: str
+    manager_email: str
     department: str
     facility: str
     credential_type: str
@@ -52,6 +53,10 @@ class CredentialOut(BaseModel):
     status: CredentialStatus
     days_left: Optional[int]
     last_verification: Optional[VerificationOut]  # None = not yet verified
+    email_contacted: bool
+    email_contact_count: int
+    last_email_contact_at: Optional[datetime]
+    last_email_contact_channel: Optional[Literal["email", "outbox"]]
 
     @classmethod
     def from_model(cls, c: Credential) -> "CredentialOut":
@@ -59,6 +64,7 @@ class CredentialOut(BaseModel):
             id=c.id,
             associate_id=c.associate_id,
             associate_name=c.associate.name,
+            manager_email=c.associate.manager_email,
             department=c.associate.department,
             facility=c.associate.facility,
             credential_type=c.credential_type.name,
@@ -74,6 +80,10 @@ class CredentialOut(BaseModel):
             status=c.status,
             days_left=status_rules.days_left(c.expires_date),
             last_verification=VerificationOut.model_validate(c.verifications[-1]) if c.verifications else None,
+            email_contacted=bool(c.email_contacts),
+            email_contact_count=len(c.email_contacts),
+            last_email_contact_at=c.email_contacts[-1].sent_at if c.email_contacts else None,
+            last_email_contact_channel=c.email_contacts[-1].channel if c.email_contacts else None,
         )
 
 
@@ -142,6 +152,16 @@ class AlertRunResult(BaseModel):
     sent: int
     by_threshold: dict[AlertThreshold, int]
     by_channel: dict[str, int]  # alert rows emailed vs left in the outbox
+
+
+class CredentialEmailContactOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    credential_id: int
+    kind: Literal["initial", "follow_up"]
+    sent_to: str
+    sent_at: datetime
+    channel: Literal["email", "outbox"]
 
 
 class DailyRunOut(BaseModel):

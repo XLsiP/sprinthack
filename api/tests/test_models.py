@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from db import Base, SessionLocal, engine
 from main import app
-from models import Alert, Associate, Credential, CredentialType, RoleRequirement, Verification
+from models import Alert, Associate, Credential, CredentialEmailContact, CredentialType, RoleRequirement, Verification
 
 # The data model contract from CLAUDE.md.
 CONTRACT = {
@@ -17,6 +17,7 @@ CONTRACT = {
     "credentials": {"id", "associate_id", "credential_type_id", "number", "issued_date", "expires_date", "status"},
     "verifications": {"id", "credential_id", "checked_at", "source", "result", "details", "evidence_path"},
     "alerts": {"id", "credential_id", "threshold", "sent_to", "sent_at", "channel"},
+    "credential_email_contacts": {"id", "credential_id", "kind", "sent_to", "sent_at", "channel"},
 }
 
 
@@ -96,6 +97,11 @@ def test_round_trip_and_cascade_delete(db):
     credential.alerts.append(
         Alert(threshold="30", sent_to="m@example.org", sent_at=datetime(2025, 12, 2), channel="outbox")
     )
+    credential.email_contacts.append(
+        CredentialEmailContact(
+            kind="initial", sent_to="m@example.org", sent_at=datetime(2025, 12, 3), channel="outbox"
+        )
+    )
     associate.credentials.append(credential)
     db.add(associate)
     db.flush()
@@ -109,11 +115,12 @@ def test_round_trip_and_cascade_delete(db):
     assert loaded.credentials[0].status == "valid"
     assert loaded.credentials[0].verifications[0].details == {"mock": True}
     assert loaded.credentials[0].alerts[0].threshold == "30"
+    assert loaded.credentials[0].email_contacts[0].kind == "initial"
     assert db.scalar(select(RoleRequirement)).credential_type_id == ctype.id
 
     db.delete(loaded)
     db.commit()
-    for model in (Credential, Verification, Alert):
+    for model in (Credential, Verification, Alert, CredentialEmailContact):
         assert db.scalars(select(model)).all() == []
     assert db.scalar(select(CredentialType)) is not None
 

@@ -30,6 +30,7 @@ export interface Credential {
   id: number;
   associate_id: number;
   associate_name: string;
+  manager_email: string;
   department: string;
   facility: string;
   credential_type: string;
@@ -42,6 +43,10 @@ export interface Credential {
   status: CredentialStatus;
   days_left: number | null;
   last_verification: Verification | null;
+  email_contacted: boolean;
+  email_contact_count: number;
+  last_email_contact_at: string | null;
+  last_email_contact_channel: "email" | "outbox" | null;
 }
 
 export interface Associate {
@@ -134,6 +139,14 @@ export interface AlertRunResult {
   sent: number;
   by_threshold: Partial<Record<AlertThreshold, number>>;
   by_channel?: { email: number; outbox: number }; // alert rows emailed vs left in the outbox
+}
+
+export interface CredentialEmailContact {
+  credential_id: number;
+  kind: "initial" | "follow_up";
+  sent_to: string;
+  sent_at: string;
+  channel: "email" | "outbox";
 }
 
 export interface DailyRunResult {
@@ -255,6 +268,8 @@ export const api = {
   allCredentials,
   alerts: () => request<Alert[]>("/alerts"),
   runAlerts: () => request<AlertRunResult>("/alerts/run", undefined, "POST"),
+  emailCredentialContact: (id: number) =>
+    request<CredentialEmailContact>(`/alerts/credential/${id}/email`, undefined, "POST"),
   dailyJob: () => request<DailyJobStatus>("/jobs/daily"),
   runDailyJob: () => request<DailyRunResult>("/jobs/daily/run", undefined, "POST"),
 };
