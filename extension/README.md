@@ -5,6 +5,12 @@ confirms what it shows. This helper removes the typing. When you click **Open lo
 tracker, it gets the person's result on screen, reads the expiry date off the page, and fills in the
 tracker's form. You check it and click **Save and next**.
 
+The tracker's **Verify all** button can look up ARDMS, NMTCB and Michigan by itself, since those
+sites have no robot check. This helper is for everything else: every ARRT credential, anyone "Verify
+all" could not settle (several people with the same name, or nobody under that name), and any
+credential you would rather check by hand. It works the same on all four sites whether or not anyone
+has clicked "Verify all".
+
 ## What happens on each site
 
 | Source | When you click Open lookup | What you do on the site |

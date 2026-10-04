@@ -108,16 +108,26 @@ function ErrorBanner({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Verify all result. Hand-checked credentials are skipped by the run, so say so and point to the queue. */
+/**
+ * Verify all result. ARRT is skipped (it needs a person for its robot check); ARDMS, NMTCB and Michigan are
+ * looked up automatically, and any of those the lookup could not settle are left for a person too.
+ */
 function VerifyAllMessage({ result }: { result: VerifyAllResult }) {
   const { checked, skipped_manual: manual } = result;
-  if (manual === 0) return <>Checked {checked.toLocaleString()} credentials</>;
+  const verified = result.by_result.verified ?? 0;
+  const unsettled = checked - verified;
+  if (manual === 0 && unsettled === 0) return <>Checked {checked.toLocaleString()} credentials</>;
   return (
     <>
-      {checked > 0 && <>Checked {checked.toLocaleString()} automatically · </>}
-      {manual.toLocaleString()} {manual === 1 ? "is" : "are"} checked by hand ·{" "}
+      {checked > 0 && (
+        <>
+          Checked {checked.toLocaleString()} automatically: {verified.toLocaleString()} verified
+          {unsettled > 0 && <>, {unsettled.toLocaleString()} {unsettled === 1 ? "needs" : "need"} a person</>} ·{" "}
+        </>
+      )}
+      {manual > 0 && <>{manual.toLocaleString()} to check by hand · </>}
       <Link href="/verify" className="font-medium text-foreground hover:underline">
-        Open Verify queue
+        Open Verify
       </Link>
     </>
   );

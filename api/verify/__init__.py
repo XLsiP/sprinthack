@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from models import Credential, Verification
 from status import refresh_credential
+from verify.ardms import ArdmsVerifier
 from verify.arrt import ArrtVerifier
 from verify.base import VerificationResult
 from verify.bls import BlsVerifier
@@ -15,6 +16,7 @@ from verify.michigan_lara import MichiganLaraVerifier
 from verify.michigan_license import MichiganLicenseVerifier
 from verify.mock import skip_delay
 from verify.nmtcb import NmtcbVerifier
+from verify.nmtcb_site import NmtcbSiteVerifier
 from verify.nppes import NppesVerifier
 
 VERIFIERS = {
@@ -29,6 +31,19 @@ VERIFIERS = {
 # Real integrations, used when the credential type's verify_method is "api". They take precedence over a
 # mock registered for the same source, so synthetic data keeps its mocks and never calls a real site.
 API_VERIFIERS = {v.source: v for v in (MichiganLaraVerifier(),)}
+
+
+# Real lookups for hand-checked credentials that run only when someone asks, with "Verify all": sources
+# with no "I'm not a robot" check. Nothing else runs them (not the daily job, not "verify one"), and
+# the same credentials can still be checked by hand. ARRT has a robot check and is never automated.
+ON_REQUEST_VERIFIERS = {v.source: v for v in (MichiganLaraVerifier(), ArdmsVerifier(), NmtcbSiteVerifier())}
+
+
+def on_request_verifier(credential: Credential):
+    """The real lookup "Verify all" may run for a hand-checked credential, or None if its source has none."""
+    if not is_manual(credential):
+        return None
+    return ON_REQUEST_VERIFIERS.get(credential.credential_type.issuing_source)
 
 
 def verifier_for(credential: Credential):
@@ -95,10 +110,13 @@ def record_manual(
     return verification
 
 
-def run(db: Session, credential: Credential, delay: bool = True) -> Verification:
-    """Verify one credential against its source, record the result, and refresh its status."""
+def run(db: Session, credential: Credential, delay: bool = True, verifier=None) -> Verification:
+    """Verify one credential against its source, record the result, and refresh its status.
+
+    `verifier` overrides the credential's usual one (an on-request lookup, see ON_REQUEST_VERIFIERS).
+    """
     source = credential.credential_type.issuing_source
-    verifier = verifier_for(credential)
+    verifier = verifier or verifier_for(credential)
     if verifier is None:
         outcome = VerificationResult("error", source, {"reason": "No verifier for this source"})
     else:

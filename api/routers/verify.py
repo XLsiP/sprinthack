@@ -74,13 +74,22 @@ def verify_all(
     facility: Optional[str] = None,
     db: Session = Depends(get_db),
 ) -> VerifyAllOut:
-    """Re-verify every credential in scope (all of them when no filter is given)."""
+    """Re-verify every credential in scope (all of them when no filter is given).
+
+    Hand-checked credentials are left alone, except those whose source has an on-request lookup
+    (ARDMS, NMTCB, Michigan): this is the one place those run, because someone asked.
+    """
     query = filter_associates(select(Credential).join(Associate), manager, department, facility)
     results: Counter[str] = Counter()
     skipped = 0
     for credential in db.scalars(query.options(*CREDENTIAL_LOAD)):
         if verify.is_manual(credential):
-            skipped += 1
+            on_request = verify.on_request_verifier(credential)
+            if on_request is None:
+                skipped += 1
+                continue
+            results[verify.run(db, credential, delay=False, verifier=on_request).result] += 1
+            db.commit()  # these lookups are slow; keep each result even if the request is cut short
             continue
         results[verify.run(db, credential, delay=False).result] += 1
     db.commit()
