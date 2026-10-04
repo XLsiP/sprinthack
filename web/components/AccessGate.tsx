@@ -25,9 +25,9 @@ function GateLayout({ children }: { children: React.ReactNode }) {
         aria-hidden
         className="absolute inset-0 -z-10 bg-[repeating-conic-gradient(from_150deg_at_50%_-10%,var(--color-sky-100)_0deg_3deg,transparent_3deg_10deg)] opacity-50 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]"
       />
-      <Card className="w-full max-w-sm shadow-sm">
+      <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="text-center">
-          <Brand size="lg" className="mx-auto mb-2 w-fit" />
+          <Brand size="lg" className="mb-2" />
           <CardDescription>Credential tracking for imaging teams</CardDescription>
         </CardHeader>
         {children}
