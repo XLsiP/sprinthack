@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+import roster
 import seed
 from db import Base, SessionLocal, engine
 from main import app
@@ -45,7 +46,9 @@ SEARCH_URL = michigan_lara.URL
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # The automatic Michigan check is off by default (every source is hand-checked); turn it on here.
+    monkeypatch.setattr(roster, "VERIFY_METHODS", {"MI_LARA": "api"})
     Base.metadata.drop_all(engine)
     assert seed.seed(reset=True, roster_path=str(FIXTURE)) == 6
     with TestClient(app) as c:

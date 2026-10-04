@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Credentialing Tracker helper",
+  "version": "0.3.0",
+  "description": "For credential lookup pages (ARRT, ARDMS, NMTCB, Michigan license) opened from the Credentialing Tracker: fills in the person's name and reads the result back into the tracker for you to check. You complete any \"I'm not a robot\" check yourself.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.arrt.org/*",
+        "https://arrt.org/*",
+        "https://www.nmtcb.org/*",
+        "https://myportal.inteleos.org/*",
+        "https://aca-prod.accela.com/MILARA/*"
+      ],
+      "js": ["sites.js", "readers.js", "content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:3000/*", "https://*.vercel.app/*"],
+      "include_globs": ["http://localhost:3000/*", "https://sprinthack-*.vercel.app/*"],
+      "js": ["tracker.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
