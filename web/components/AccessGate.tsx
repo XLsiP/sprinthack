@@ -5,9 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/Logo";
-import { CoBrand } from "@/components/PartnerBrand";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Brand } from "@/components/Brand";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { setAccessPassword } from "@/lib/access";
 import { api } from "@/lib/api";
@@ -28,10 +27,7 @@ function GateLayout({ children }: { children: React.ReactNode }) {
       />
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="text-center">
-          <CoBrand className="mb-2 justify-center">
-            <Logo size={40} />
-          </CoBrand>
-          <CardTitle className="text-lg">Credentialing Tracker</CardTitle>
+          <Brand size="lg" className="mb-2 justify-center" />
           <CardDescription>Credential tracking for Beacon Health System&apos;s imaging teams</CardDescription>
         </CardHeader>
         {children}

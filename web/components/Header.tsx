@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { DailyRunButton } from "@/components/DailyRunButton";
-import { Logo } from "@/components/Logo";
-import { CoBrand } from "@/components/PartnerBrand";
+import { Brand } from "@/components/Brand";
 import { useRole } from "@/components/Providers";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { cn } from "@/lib/utils";
@@ -23,16 +22,10 @@ export function Header() {
   return (
     <header className="border-b bg-background print:hidden">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 sm:px-6">
-        {/* On phones only the mark and a short "for Beacon" show, so the header still fits. */}
-        <CoBrand compact>
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-semibold transition-transform motion-safe:hover:-translate-y-px"
-          >
-            <Logo size={28} />
-            <span className="max-sm:sr-only">Credentialing Tracker</span>
-          </Link>
-        </CoBrand>
+        {/* On phones the subtitle hides so the logo and name still fit. */}
+        <Link href="/" className="transition-transform motion-safe:hover:-translate-y-px">
+          <Brand compact />
+        </Link>
         <nav className="flex gap-1 text-sm">
           {NAV.map((item) => (
             <Link
