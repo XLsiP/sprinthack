@@ -4,15 +4,19 @@
 export type HelperResult = {
   id: number; // the credential the lookup was opened for
   source: string;
-  expires: string | null; // YYYY-MM-DD
+  credentials: string | null; // as the source writes them, e.g. R.T.(R)(CT)(ARRT)
+  status: string | null;
   number: string | null;
-  summary: string; // what the page showed, in the site's own words
+  issued: string | null; // YYYY-MM-DD
+  expires: string | null; // YYYY-MM-DD
+  extra: { label: string; value: string }[]; // everything else on the page, in the site's own words
   hint: string | null; // how a value was worked out, when it was not copied as shown
   none: boolean; // the site said nobody matched
   mismatch: boolean; // the name on the page was not the person looked up
 };
 
 const MAX_AGE_MS = 30 * 60 * 1000;
+const MAX_EXTRA = 12;
 
 const text = (value: unknown, max: number): string | null =>
   typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
@@ -25,13 +29,27 @@ export function parseHelperResult(data: unknown): HelperResult | null {
   if (typeof message.result !== "object" || message.result === null) return null;
   const r = message.result as Record<string, unknown>;
   if (typeof r.id !== "number" || typeof r.at !== "number" || Date.now() - r.at > MAX_AGE_MS) return null;
-  const expires = text(r.expires, 10);
+  const day = (value: unknown) => {
+    const date = text(value, 10);
+    return date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+  };
+  // The same limits the API applies, so a long page cannot make the save fail.
+  const extra: HelperResult["extra"] = [];
+  for (const pair of Array.isArray(r.extra) ? r.extra : []) {
+    if (!Array.isArray(pair) || extra.length >= MAX_EXTRA) continue;
+    const label = text(pair[0], 60);
+    const value = text(pair[1], 500);
+    if (label && value && !extra.some((e) => e.label === label)) extra.push({ label, value });
+  }
   return {
     id: r.id,
     source: text(r.source, 40) ?? "the lookup page",
-    expires: expires && /^\d{4}-\d{2}-\d{2}$/.test(expires) ? expires : null,
+    credentials: text(r.credentials, 300),
+    status: text(r.status, 120),
     number: text(r.number, 64),
-    summary: text(r.summary, 300) ?? "",
+    issued: day(r.issued),
+    expires: day(r.expires),
+    extra,
     hint: text(r.hint, 200),
     none: r.none === true,
     mismatch: r.mismatch === true,

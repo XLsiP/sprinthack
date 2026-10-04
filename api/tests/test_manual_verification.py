@@ -48,6 +48,42 @@ def test_recording_a_verified_lookup_updates_the_credential(client):
     ]
 
 
+def test_everything_the_source_shows_is_kept_with_the_verification(client):
+    cid = credential_id()
+    body = client.post("/api/verify/credential/%d/manual" % cid, json={
+        "result": "verified", "expires_date": in_days(400), "issued_date": in_days(-900),
+        "credentials_held": " R.T.(R)(CT)(ARRT) ", "source_status": "Active",
+        "source_details": {" CE Biennium ": "12/1/2025 to 11/30/2027", "Location": "Sampletown, MI 49000", "Blank": " "},
+    }).json()
+    assert body["details"] == {
+        "entered_by_hand": True, "number": None, "expires_date": in_days(400), "issued_date": in_days(-900),
+        "credentials_held": "R.T.(R)(CT)(ARRT)", "source_status": "Active",
+        "CE Biennium": "12/1/2025 to 11/30/2027", "Location": "Sampletown, MI 49000",
+    }
+    with SessionLocal() as db:
+        assert db.get(Credential, cid).issued_date.isoformat() == in_days(-900)
+
+
+def test_source_details_are_limited_and_cannot_replace_built_in_values(client):
+    url = "/api/verify/credential/%d/manual" % credential_id()
+    base = {"result": "verified", "expires_date": in_days(400)}
+    for details in (
+        {"Expires date": "never"}, {"entered_by_hand": "no"}, {"csv_path": "/etc"}, {"x" * 61: "a"}, {"Label": "v" * 501},
+        {"Label %d" % i: "v" for i in range(13)},
+    ):
+        assert client.post(url, json={**base, "source_details": details}).status_code == 422, details
+    assert client.post(url, json={**base, "credentials_held": "c" * 301}).status_code == 422
+    with SessionLocal() as db:
+        assert db.get(Credential, credential_id()).status == "unverified"
+
+
+def test_not_found_keeps_no_source_details(client):
+    body = client.post("/api/verify/credential/%d/manual" % credential_id(), json={
+        "result": "not_found", "credentials_held": "R.T.(R)(ARRT)", "source_details": {"Location": "Sampletown, MI"},
+    }).json()
+    assert body["details"] == {"entered_by_hand": True, "reason": "Not found at the source when checked by hand"}
+
+
 @pytest.mark.parametrize("days, status", [(20, "expiring_30"), (75, "expiring_90"), (-3, "expired")])
 def test_status_follows_the_entered_date(client, days, status):
     cid = credential_id()

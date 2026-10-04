@@ -46,7 +46,8 @@ def record_manual_verification(
         raise HTTPException(422, "issued_date: must not be after expires_date")
     verification = verify.record_manual(
         db, credential, body.result, number=body.number, expires_date=body.expires_date,
-        issued_date=body.issued_date, note=body.note,
+        issued_date=body.issued_date, note=body.note, credentials_held=body.credentials_held,
+        source_status=body.source_status, source_details=body.source_details,
     )
     db.commit()
     return VerificationOut.model_validate(verification)

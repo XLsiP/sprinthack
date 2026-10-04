@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 import status as status_rules
 from models import Associate, Credential
@@ -122,6 +122,13 @@ class AssociateDetail(AssociateOut):
         return cls(**cls.fields_from(a), credentials=[CredentialOut.from_model(c) for c in ordered])
 
 
+# Keys the app writes into a verification's details; a source label must not replace them.
+RESERVED_DETAIL_KEYS = {
+    "entered_by_hand", "number", "expires_date", "issued_date", "note", "reason", "credentials_held",
+    "source_status", "mock", "seeded", "outcome_source", "needs_review", "candidates",
+}
+
+
 class ManualVerificationIn(BaseModel):
     """What a person saw when they looked a credential up at its source."""
     result: Literal["verified", "not_found"]
@@ -129,6 +136,25 @@ class ManualVerificationIn(BaseModel):
     expires_date: Optional[date] = None
     issued_date: Optional[date] = None
     note: Optional[str] = Field(None, max_length=500)
+    credentials_held: Optional[str] = Field(None, max_length=300)  # as the source writes them, e.g. R.T.(R)(CT)(ARRT)
+    source_status: Optional[str] = Field(None, max_length=120)  # e.g. Active
+    # Anything else the source page shows, by its label there (e.g. "CE Biennium"). Kept with the verification.
+    source_details: dict[str, str] = Field(default_factory=dict, max_length=12)
+
+    @field_validator("source_details")
+    @classmethod
+    def _labels_are_free(cls, value: dict[str, str]) -> dict[str, str]:
+        cleaned = {}
+        for label, text in value.items():
+            label, text = label.strip(), text.strip()
+            key = label.lower().replace(" ", "_")
+            if not label or len(label) > 60 or len(text) > 500:
+                raise ValueError("each label is 1 to 60 characters and each value at most 500")
+            if key in RESERVED_DETAIL_KEYS or key.endswith("path"):
+                raise ValueError("'%s' is recorded by the app itself and cannot be set here" % label)
+            if text:
+                cleaned[label] = text
+        return cleaned
 
 
 class VerifyAllOut(BaseModel):

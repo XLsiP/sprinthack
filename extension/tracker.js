@@ -1,6 +1,7 @@
 // Runs on the Credentialing Tracker itself. Passes the result read on a lookup page (content.js)
 // to the tracker's Verify form, which shows it pre-filled for the person to check and save.
-// The result holds the tracker's row number, the dates and the credential text; never a name.
+// The result holds the tracker's row number and what the page showed about the credential
+// (dates, status, location); never the person's name.
 (() => {
   function send(result) {
     if (result) window.postMessage({ from: "bct-helper", type: "result", result }, location.origin);

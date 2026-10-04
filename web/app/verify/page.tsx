@@ -18,7 +18,10 @@ const FIELD =
   "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDone: () => void; onSkip: () => void }) {
+  const [held, setHeld] = useState("");
+  const [sourceStatus, setSourceStatus] = useState("");
   const [number, setNumber] = useState("");
+  const [issued, setIssued] = useState("");
   const [expires, setExpires] = useState("");
   const [note, setNote] = useState("");
   const [read, setRead] = useState<HelperResult | null>(null);
@@ -27,9 +30,11 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
     () =>
       listenForHelper(credential.id, (result) => {
         setRead(result);
-        if (result.expires) setExpires(result.expires);
+        if (result.credentials) setHeld(result.credentials);
+        if (result.status) setSourceStatus(result.status);
         if (result.number) setNumber(result.number);
-        if (result.summary) setNote(`${result.source} page showed: ${result.summary}`.slice(0, 500));
+        if (result.issued) setIssued(result.issued);
+        if (result.expires) setExpires(result.expires);
       }),
     [credential.id],
   );
@@ -79,7 +84,16 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
           className="space-y-3"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({ result: "verified", number: number || undefined, expires_date: expires, note: note || undefined });
+            save.mutate({
+              result: "verified",
+              credentials_held: held || undefined,
+              source_status: sourceStatus || undefined,
+              number: number || undefined,
+              issued_date: issued || undefined,
+              expires_date: expires,
+              source_details: read ? Object.fromEntries(read.extra.map((e) => [e.label, e.value])) : undefined,
+              note: note || undefined,
+            });
           }}
         >
           <p className="text-sm font-medium">2. Record what it shows</p>
@@ -107,14 +121,41 @@ function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDo
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-sm">
+              <span>Credentials held</span>
+              <input className={FIELD} value={held} onChange={(e) => setHeld(e.target.value)} maxLength={300} autoComplete="off" />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>Status at source</span>
+              <input className={FIELD} value={sourceStatus} onChange={(e) => setSourceStatus(e.target.value)} maxLength={120} autoComplete="off" />
+            </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="space-y-1 text-sm">
               <span>Credential or ID number</span>
               <input className={FIELD} value={number} onChange={(e) => setNumber(e.target.value)} maxLength={64} autoComplete="off" />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>Issued on</span>
+              <input className={FIELD} type="date" value={issued} onChange={(e) => setIssued(e.target.value)} />
             </label>
             <label className="space-y-1 text-sm">
               <span>Expires on</span>
               <input className={FIELD} type="date" required value={expires} onChange={(e) => setExpires(e.target.value)} />
             </label>
           </div>
+          {read && read.extra.length > 0 && (
+            <div className="space-y-1 text-sm">
+              <p>Also on the {read.source} page (saved with this record)</p>
+              <dl className="divide-y rounded-lg border">
+                {read.extra.map((e) => (
+                  <div key={e.label} className="grid gap-x-3 px-3 py-1.5 sm:grid-cols-[14rem_1fr]">
+                    <dt className="text-muted-foreground">{e.label}</dt>
+                    <dd>{e.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
           <label className="block space-y-1 text-sm">
             <span>Note (optional)</span>
             <input className={FIELD} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} autoComplete="off" />
