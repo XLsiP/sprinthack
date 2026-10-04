@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { CredentialTable } from "@/components/CredentialTable";
 import { CredentialTimeline } from "@/components/CredentialTimeline";
+import { Brand } from "@/components/Brand";
 import { useDemoManager, useRole } from "@/components/Providers";
 import { resultLabel, STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -59,6 +60,7 @@ function PrintableFile({ associate: a }: { associate: AssociateDetail }) {
   const cell = "border border-black px-1.5 py-1 align-top";
   return (
     <div className="hidden space-y-4 text-black print:block">
+      <Brand />
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Credential file</h1>
         <p className="text-base font-medium">{a.name}</p>

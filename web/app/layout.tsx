@@ -21,6 +21,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Credentialing Tracker",
   description: "Verify clinical staff credentials and track expirations.",
+  // Beacon's icon when its file is in public/partners/ (see next.config.ts), otherwise a neutral one.
+  icons: { icon: process.env.BEACON_ICON || "/app-icon.svg" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
