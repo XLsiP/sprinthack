@@ -160,10 +160,15 @@ class MichiganLaraVerifier:
         except (httpx.HTTPError, ValueError) as exc:
             return VerificationResult("error", self.source, {**searched, "reason": "Could not check: %s" % exc})
 
-        if not records:
+        if not records and credential.number:
             return VerificationResult("not_found", self.source, {
-                **searched, "reason": "No Michigan license found under this %s"
-                % ("number" if credential.number else "name"),
+                **searched, "reason": "No Michigan license found under this number",
+            })
+        if not records:
+            # A name with no match says little: the license may be under another name. Left for a person.
+            return VerificationResult("error", self.source, {
+                **searched, "needs_review": True,
+                "reason": "No Michigan license found under this name; it may be under another name. Check by hand.",
             })
         if not _same_person(records):
             return VerificationResult("error", self.source, {

@@ -28,3 +28,16 @@ def no_live_license_lookups(monkeypatch):
 
     monkeypatch.setattr(michigan_lara, "fetch", refuse)
     monkeypatch.setattr(michigan_lara, "MIN_INTERVAL_SECONDS", 0)
+
+
+@pytest.fixture(autouse=True)
+def no_live_board_lookups(monkeypatch):
+    """Tests must never query the real ARDMS or NMTCB sites; a test that needs results patches `fetch`."""
+    from verify import ardms, nmtcb_site
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("A test tried to run a live ARDMS or NMTCB lookup")
+
+    for module in (ardms, nmtcb_site):
+        monkeypatch.setattr(module, "fetch", refuse)
+        monkeypatch.setattr(module, "MIN_INTERVAL_SECONDS", 0)

@@ -80,7 +80,7 @@ export function VerifyPicker({
           </div>
           <div role="group" aria-label="Show" className="flex items-center gap-1 rounded-lg border p-0.5">
             <Choice pressed={show === "unverified"} onClick={() => onShow("unverified")}>
-              Not yet verified
+              Still to verify
             </Choice>
             <Choice pressed={show === "all"} onClick={() => onShow("all")}>
               All

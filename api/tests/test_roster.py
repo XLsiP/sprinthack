@@ -83,8 +83,8 @@ def test_api_shows_unverified_and_the_largest_team(client):
     assert len(client.get("/api/credentials", params={"status": "unverified"}).json()) == 7
 
 
-def test_no_verifier_runs_on_roster_credentials(client, monkeypatch):
-    """The autouse guard in conftest fails this test if anything tries a live Michigan lookup."""
+def test_no_verifier_runs_on_roster_credentials_unless_asked(client, monkeypatch):
+    """The autouse guards in conftest fail this test if anything tries a live lookup."""
     monkeypatch.setenv("HR_EMAIL", "hr@example.org")
     credential_id = people()["Blake Testperson"].credentials[0].id
 
@@ -93,8 +93,6 @@ def test_no_verifier_runs_on_roster_credentials(client, monkeypatch):
 
     associate_id = people()["Avery Testperson"].id  # holds an ARRT registration and a Michigan license
     assert client.post("/api/verify/associate/%d" % associate_id).json() == []
-    assert client.post("/api/verify/all").json() == {"checked": 0, "by_result": {}, "skipped_manual": 7}
-
     run = scheduler.run_daily_job("manual")
     assert run.checked == 0 and run.alerts.sent == 0  # nothing verified, and no dates to alert on
 

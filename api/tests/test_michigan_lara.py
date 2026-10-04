@@ -129,10 +129,22 @@ def test_no_match(client, monkeypatch):
     answer(monkeypatch, SEARCH_URL, NONE_PAGE)
     credential_id = michigan_credential()
     result = client.post("/api/verify/credential/%d" % credential_id).json()
-    assert result["result"] == "not_found" and "No Michigan license found under this name" in result["details"]["reason"]
+    # A name with no match may be a license under another name, so it is left for a person, not failed.
+    assert result["result"] == "error" and result["details"]["needs_review"] is True
+    assert "No Michigan license found under this name" in result["details"]["reason"]
     with SessionLocal() as db:
         credential = db.get(Credential, credential_id)
-        assert credential.status == "verification_failed" and credential.number is None
+        assert credential.status == "unverified" and credential.number is None
+
+
+def test_no_match_for_a_license_number_is_not_found(client, monkeypatch):
+    credential_id = michigan_credential()
+    with SessionLocal() as db:
+        db.get(Credential, credential_id).number = "4700000001"
+        db.commit()
+    answer(monkeypatch, SEARCH_URL, NONE_PAGE)
+    result = client.post("/api/verify/credential/%d" % credential_id).json()
+    assert result["result"] == "not_found" and "under this number" in result["details"]["reason"]
 
 
 def test_same_person_with_an_old_license_uses_the_current_one(client, monkeypatch):
@@ -193,12 +205,18 @@ def test_unreadable_page_is_an_error(monkeypatch):
 
 
 def test_verify_all_checks_michigan_and_skips_hand_verified(client, monkeypatch):
+    from verify import ardms, nmtcb_site
     calls = answer(monkeypatch, DETAIL_URL, detail_page())
+    monkeypatch.setattr(ardms, "fetch", lambda name: '<div id="status-verif-listing">No results found</div>')
+    monkeypatch.setattr(nmtcb_site, "fetch", lambda url, params=None: (
+        '<section id="main-section">Sorry, but we cannot find an entry to match your query.</section>'
+    ))
     summary = client.post("/api/verify/all").json()
-    assert summary == {"checked": 2, "by_result": {"verified": 2}, "skipped_manual": 5}
+    # Michigan twice, plus the ARDMS and NMTCB lookups that run on request; the three ARRT ones are left alone.
+    assert summary == {"checked": 4, "by_result": {"verified": 2, "error": 2}, "skipped_manual": 3}
     assert len(calls) == 2
     with SessionLocal() as db:
-        assert {v.source for v in db.scalars(select(Verification))} == {"Michigan LARA"}
+        assert {v.source for v in db.scalars(select(Verification))} == {"Michigan LARA", "ARDMS", "NMTCB"}
 
 
 def test_synthetic_michigan_licenses_still_use_the_mock(monkeypatch):

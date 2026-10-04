@@ -205,11 +205,13 @@ function VerifyQueue() {
 
   // Hand-verified credentials only; the app checks the others itself.
   const manual = (queue.data ?? []).filter((c) => c.verify_method === "manual");
-  const left = manual.filter((c) => c.status === "unverified").length;
+  // Still needing a person: never verified, or a check (by hand or by "Verify all") that failed.
+  const open = (c: Credential) => c.status === "unverified" || c.status === "verification_failed";
+  const left = manual.filter(open).length;
   const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const listed = manual.filter(
     (c) =>
-      (show === "all" || c.status === "unverified") &&
+      (show === "all" || open(c)) &&
       (!source || c.issuing_source === source) &&
       words.every((word) => c.associate_name.toLowerCase().includes(word)),
   );
