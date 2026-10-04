@@ -27,8 +27,8 @@ function GateLayout({ children }: { children: React.ReactNode }) {
       />
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="text-center">
-          <Brand size="lg" className="mb-2 justify-center" />
-          <CardDescription>Credential tracking for Beacon Health System&apos;s imaging teams</CardDescription>
+          <Brand size="lg" className="mx-auto mb-2 w-fit" />
+          <CardDescription>Credential tracking for imaging teams</CardDescription>
         </CardHeader>
         {children}
       </Card>
