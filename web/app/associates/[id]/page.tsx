@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type Credential } from "@/lib/api";
+import { lookupLink } from "@/lib/lookup";
 import { managerName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -153,7 +154,7 @@ export default function AssociatePage() {
       // Checked by a person at the source; the app never looks these up itself.
       return credential.lookup_url ? (
         <a
-          href={credential.lookup_url}
+          href={lookupLink(credential) ?? credential.lookup_url}
           target="_blank"
           rel="noreferrer"
           aria-label={`Look up ${credential.credential_type} at ${credential.issuing_source}`}

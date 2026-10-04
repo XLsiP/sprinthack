@@ -53,6 +53,7 @@ Hackathon project (2-day Innovation Sprint) for Beacon Health System (South Bend
   scheduler.py            # APScheduler jobs
   seed.py                 # synthetic data generator
 /design/refs/             # screenshot references for UI
+/extension                # Chrome helper: fills the name on ARRT / ARDMS / NMTCB lookup pages (see its README)
 ```
 
 ## Data model

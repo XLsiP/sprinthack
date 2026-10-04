@@ -10,20 +10,10 @@ import { useDemoManager, useRole } from "@/components/Providers";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type Credential, type ManualVerification } from "@/lib/api";
+import { lookupLink } from "@/lib/lookup";
 
 const FIELD =
   "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
-/** The lookup page for a credential, with the name filled in where the source's page accepts it. */
-function lookupLink(c: Credential): string | null {
-  if (!c.lookup_url) return null;
-  if (c.issuing_source === "NMTCB") {
-    const parts = c.associate_name.split(" ");
-    const query = new URLSearchParams({ LastName: parts[parts.length - 1], FirstName: parts.slice(0, -1).join(" ") });
-    return `https://www.nmtcb.org/verification/results?${query}`;
-  }
-  return c.lookup_url;
-}
 
 function Recorder({ credential, onDone, onSkip }: { credential: Credential; onDone: () => void; onSkip: () => void }) {
   const [number, setNumber] = useState("");
