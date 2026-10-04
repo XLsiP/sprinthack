@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { CredentialTable } from "@/components/CredentialTable";
 import { CredentialTimeline } from "@/components/CredentialTimeline";
+import { Logo } from "@/components/Logo";
 import { useDemoManager, useRole } from "@/components/Providers";
 import { resultLabel, STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -59,7 +60,10 @@ function PrintableFile({ associate: a }: { associate: AssociateDetail }) {
   return (
     <div className="hidden space-y-4 text-black print:block">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Credential file</h1>
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <Logo size={28} />
+          Credential file
+        </h1>
         <p className="text-base font-medium">{a.name}</p>
         <dl className="grid grid-cols-[6rem_1fr] gap-x-3 text-sm">
           <dt>Role</dt>
