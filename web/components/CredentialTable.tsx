@@ -48,16 +48,19 @@ export function CredentialTable({
       </>
     );
   }
+  // With the Associate column the rows change with the HR filters, so the columns whose content varies get set
+  // widths (and the Associate cell wraps) to keep the table from jumping between filters.
+  const width = (w: string) => (showAssociate ? w : undefined);
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
-            {showAssociate && <TableHead>Associate</TableHead>}
-            <TableHead>Credential</TableHead>
+            {showAssociate && <TableHead className="w-[22%]">Associate</TableHead>}
+            <TableHead className={width("w-[18%]")}>Credential</TableHead>
             <TableHead>Number</TableHead>
-            <TableHead>Expires</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className={width("w-[13%]")}>Expires</TableHead>
+            <TableHead className={width("w-38 min-w-38")}>Status</TableHead>
             <TableHead>Last verified</TableHead>
             <TableHead />
           </TableRow>
@@ -66,7 +69,7 @@ export function CredentialTable({
           {credentials.map((c) => (
             <TableRow key={c.id}>
               {showAssociate && (
-                <TableCell>
+                <TableCell className="whitespace-normal">
                   <Link href={`/associates/${c.associate_id}`} className="font-medium hover:underline">
                     {c.associate_name}
                   </Link>

@@ -13,16 +13,18 @@ function SortHead({
   value,
   sort,
   onSortChange,
+  className,
 }: {
   label: string;
   value: AssociateSort;
   sort: AssociateSort;
   onSortChange: (sort: AssociateSort) => void;
+  className?: string;
 }) {
   const active = sort === value;
   const Icon = active ? ArrowDown : ArrowUpDown;
   return (
-    <TableHead aria-sort={active ? "ascending" : "none"}>
+    <TableHead aria-sort={active ? "ascending" : "none"} className={className}>
       <button
         type="button"
         onClick={() => onSortChange(value)}
@@ -47,20 +49,21 @@ export function AssociateTable({
   if (associates.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">No associates match.</p>;
   }
+  // Set widths, with the text columns allowed to wrap, so the columns don't jump as filters change the rows.
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <SortHead label="Associate" value="name" sort={sort} onSortChange={onSortChange} />
-          <TableHead>Manager</TableHead>
+          <SortHead label="Associate" value="name" sort={sort} onSortChange={onSortChange} className="w-[38%]" />
+          <TableHead className="w-[34%]">Manager</TableHead>
           <TableHead className="text-right">Credentials</TableHead>
-          <SortHead label="Most urgent status" value="urgency" sort={sort} onSortChange={onSortChange} />
+          <SortHead label="Most urgent status" value="urgency" sort={sort} onSortChange={onSortChange} className="w-44" />
         </TableRow>
       </TableHeader>
       <TableBody>
         {associates.map((a) => (
           <TableRow key={a.id}>
-            <TableCell>
+            <TableCell className="whitespace-normal">
               <Link href={`/associates/${a.id}`} className="font-medium hover:underline">
                 {a.name}
               </Link>
@@ -68,7 +71,7 @@ export function AssociateTable({
                 {a.role} · {a.department} · {a.facility}
               </div>
             </TableCell>
-            <TableCell className="text-muted-foreground">{a.manager_email}</TableCell>
+            <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">{a.manager_email}</TableCell>
             <TableCell className="text-right tabular-nums">{a.credential_count}</TableCell>
             <TableCell>{a.worst_status ? <StatusBadge status={a.worst_status} /> : <NoCredentialsBadge />}</TableCell>
           </TableRow>
