@@ -1,26 +1,50 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Download, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react";
+import { Ban, Download, ExternalLink, LoaderCircle, RefreshCw, UserSearch } from "lucide-react";
 import { toast } from "sonner";
 
 import { MockBadge, ResultBadge, StatusBadge, UnverifiedBadge } from "@/components/StatusBadge";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { verificationFeedback } from "@/components/VerifyFeedback";
-import { api, type Credential, evidenceUrl, type VerificationResult } from "@/lib/api";
+import { needsReview, verificationFeedback } from "@/components/VerifyFeedback";
+import { api, type Credential, evidenceUrl, type Verification } from "@/lib/api";
 import { checkedAt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Internal flags: `mock` is shown as the MOCK badge, `seeded` marks demo seed data,
-// `outcome_source` says how a mock picked its result.
-const HIDDEN_DETAILS = new Set(["mock", "seeded", "outcome_source"]);
+// `outcome_source` says how a mock picked its result, `needs_review` is shown as its own notice.
+const HIDDEN_DETAILS = new Set(["mock", "seeded", "outcome_source", "needs_review"]);
 
 /** Keys a manager should not see: internal flags and server file paths such as `csv_path`. */
-function isInternal(key: string, result: VerificationResult): boolean {
+function isInternal(key: string, v: Verification): boolean {
   if (HIDDEN_DETAILS.has(key) || /(^|_)path$/.test(key)) return true;
+  // A same-name match shows its reason and candidates in the review notice instead.
+  if (needsReview(v)) return key === "reason" || key === "candidates";
   // On a failed check, `reason` is raw exception text; the drawer shows a friendly message instead.
-  return result === "error" && key === "reason";
+  return v.result === "error" && key === "reason";
+}
+
+interface Candidate {
+  name: string;
+  license: string;
+  status: string;
+  expires: string;
+}
+
+/** The people a name search matched, read defensively since `details` is free-form JSON. */
+function candidates(v: Verification): Candidate[] {
+  const list = v.details.candidates;
+  if (!Array.isArray(list)) return [];
+  const text = (value: unknown) => (typeof value === "string" ? value : "");
+  return list
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item) => ({
+      name: text(item.name),
+      license: [text(item.license_type), text(item.license_number)].filter(Boolean).join(" · "),
+      status: text(item.status),
+      expires: text(item.expires_date),
+    }));
 }
 
 /** `source_status` → "Source status"; `npi` → "NPI". */
@@ -85,6 +109,53 @@ function Row({ term, children }: { term: string; children: React.ReactNode }) {
     <div className="grid grid-cols-[8rem_1fr] gap-3 py-2">
       <dt className="text-muted-foreground">{term}</dt>
       <dd className="min-w-0 break-words tabular-nums">{children}</dd>
+    </div>
+  );
+}
+
+function DetailList({ details }: { details: [string, unknown][] }) {
+  return (
+    <dl className="divide-y">
+      {details.map(([key, value]) => (
+        <Row key={key} term={label(key)}>
+          <DetailValue value={value} />
+        </Row>
+      ))}
+    </dl>
+  );
+}
+
+/** Several people at the source share this name; the manager has to pick one by license number. */
+function NeedsReview({ verification: v }: { verification: Verification }) {
+  const reason = typeof v.details.reason === "string" ? v.details.reason : undefined;
+  const matches = candidates(v);
+  return (
+    <div className="space-y-3">
+      <div role="status" className="flex gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-800">
+        <UserSearch className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <p>
+          <span className="font-medium">Needs review.</span>{" "}
+          {reason ?? "More than one person matches this name; enter the license number to pick one."}
+        </p>
+      </div>
+      {matches.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-muted-foreground">Possible matches at {v.source}</p>
+          <ul className="space-y-2">
+            {matches.map((m, i) => (
+              <li key={i} className="space-y-0.5 rounded-lg border px-3 py-2">
+                <p className="font-medium">{m.name || "Unnamed record"}</p>
+                {m.license && <p className="text-muted-foreground tabular-nums">{m.license}</p>}
+                {(m.status || m.expires) && (
+                  <p className="text-muted-foreground tabular-nums">
+                    {[m.status, m.expires && `Expires ${m.expires}`].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -161,7 +232,8 @@ function DrawerBody({
   onDownload: (verificationId: number) => void;
 }) {
   const v = c.last_verification;
-  const details = v ? Object.entries(v.details).filter(([key]) => !isInternal(key, v.result)) : [];
+  const details = v ? Object.entries(v.details).filter(([key]) => !isInternal(key, v)) : [];
+  const review = v ? needsReview(v) : false;
   const manual = c.verify_method === "manual";
 
   return (
@@ -201,7 +273,7 @@ function DrawerBody({
             <Section title="Latest check">
               <dl className="divide-y">
                 <Row term="Result">
-                  <ResultBadge result={v.result} />
+                  <ResultBadge result={v.result} needsReview={review} />
                 </Row>
                 <Row term="Source">
                   <span className="inline-flex items-center gap-1.5">
@@ -214,18 +286,17 @@ function DrawerBody({
             </Section>
 
             <Section title="Details">
-              {v.result === "error" ? (
+              {review ? (
+                <div className="space-y-3">
+                  <NeedsReview verification={v} />
+                  {details.length > 0 && <DetailList details={details} />}
+                </div>
+              ) : v.result === "error" ? (
                 <SectionMessage className="py-4">
                   Could not reach {v.source}. Status is unchanged; try again later.
                 </SectionMessage>
               ) : details.length > 0 ? (
-                <dl className="divide-y">
-                  {details.map(([key, value]) => (
-                    <Row key={key} term={label(key)}>
-                      <DetailValue value={value} />
-                    </Row>
-                  ))}
-                </dl>
+                <DetailList details={details} />
               ) : (
                 <SectionMessage className="py-4">The source returned no extra details.</SectionMessage>
               )}

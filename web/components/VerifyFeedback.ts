@@ -13,6 +13,11 @@ function reason(verification: Verification): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/** An "error" where the source matched several different people: not an outage, someone has to pick one. */
+export function needsReview(verification: Verification): boolean {
+  return verification.result === "error" && verification.details.needs_review === true;
+}
+
 /** Toast content for one verification of the credential named `credential`. */
 export function verificationFeedback(credential: string, verification: Verification): Feedback {
   const { result, source } = verification;
@@ -34,6 +39,13 @@ export function verificationFeedback(credential: string, verification: Verificat
         description: reason(verification) ?? `The record at ${source} does not match.`,
       };
     case "error":
+      if (needsReview(verification)) {
+        return {
+          tone: "warning",
+          title: `${credential}: needs review`,
+          description: reason(verification) ?? `More than one person matches at ${source}.`,
+        };
+      }
       return {
         tone: "warning",
         title: `${credential}: could not check`,
@@ -47,15 +59,19 @@ export function summaryFeedback(verifications: Verification[], names: Map<number
   const label = (v: Verification) => names.get(v.credential_id) ?? v.source;
   const verified = verifications.filter((v) => v.result === "verified").length;
   const failed = verifications.filter((v) => v.result !== "verified" && v.result !== "error").map(label);
-  const unreachable = verifications.filter((v) => v.result === "error").map(label);
+  const review = verifications.filter(needsReview).map(label);
+  const unreachable = verifications.filter((v) => v.result === "error" && !needsReview(v)).map(label);
   const title = `${verified} of ${verifications.length} verified`;
+  const notes = [
+    review.length > 0 ? `Needs review: ${review.join(", ")}.` : "",
+    unreachable.length > 0 ? `Could not check: ${unreachable.join(", ")}.` : "",
+  ].filter(Boolean);
 
   if (failed.length > 0) {
-    const extra = unreachable.length > 0 ? ` Could not check: ${unreachable.join(", ")}.` : "";
-    return { tone: "error", title, description: `Needs attention: ${failed.join(", ")}.${extra}` };
+    return { tone: "error", title, description: [`Needs attention: ${failed.join(", ")}.`, ...notes].join(" ") };
   }
-  if (unreachable.length > 0) {
-    return { tone: "warning", title, description: `Could not check: ${unreachable.join(", ")}.` };
+  if (notes.length > 0) {
+    return { tone: "warning", title, description: notes.join(" ") };
   }
   return { tone: "success", title, description: "Every credential was confirmed at its source." };
 }
