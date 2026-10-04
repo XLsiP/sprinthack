@@ -13,16 +13,10 @@ import { resultLabel, STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
- alex/lookup-helper
-import { type Feedback, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
-import { api, type Credential } from "@/lib/api";
-import { lookupLink } from "@/lib/lookup";
-import { managerName } from "@/lib/format";
-
 import { type Feedback, needsReview, summaryFeedback, verificationFeedback } from "@/components/VerifyFeedback";
 import { api, type AssociateDetail, type Credential } from "@/lib/api";
 import { checkedAt, localDate, managerName } from "@/lib/format";
- main
+import { lookupLink } from "@/lib/lookup";
 import { cn } from "@/lib/utils";
 
 function notify({ tone, title, description }: Feedback) {
