@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
-import { useDemoManager, useRole } from "@/components/Providers";
+import { useDemoManager, useHrScope, useRole } from "@/components/Providers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, type Scope } from "@/lib/api";
 
@@ -49,7 +48,7 @@ function Filter({
 /** The scope for the current role: a manager sees their own team, HR filters across everyone. */
 export function useScope(): { scope: Scope; filters: React.ReactNode } {
   const { role } = useRole();
-  const [picked, setPicked] = useState<Scope>({});
+  const [picked, setPicked] = useHrScope();
   const options = useQuery({ queryKey: ["filters"], queryFn: api.filters, staleTime: Infinity });
   const demo = useDemoManager();
 

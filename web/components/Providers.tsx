@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useState, useSyncExternalStore } from "react";
 
-import { api } from "@/lib/api";
+import { api, type Scope } from "@/lib/api";
 
 export type Role = "manager" | "hr";
 
@@ -64,12 +64,23 @@ export function useRole() {
   return useContext(RoleContext);
 }
 
+// HR's facility / department / manager filters, shared by every page so they carry across navigation.
+type HrScopeState = [Scope, React.Dispatch<React.SetStateAction<Scope>>];
+const HrScopeContext = createContext<HrScopeState>([{}, () => {}]);
+
+export function useHrScope() {
+  return useContext(HrScopeContext);
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } }));
   const role = useSyncExternalStore(subscribe, readRole, () => "manager" as const);
+  const hrScope = useState<Scope>({});
   return (
     <QueryClientProvider client={queryClient}>
-      <RoleContext.Provider value={{ role, setRole: writeRole }}>{children}</RoleContext.Provider>
+      <RoleContext.Provider value={{ role, setRole: writeRole }}>
+        <HrScopeContext.Provider value={hrScope}>{children}</HrScopeContext.Provider>
+      </RoleContext.Provider>
     </QueryClientProvider>
   );
 }
