@@ -21,7 +21,7 @@ export function Header() {
   const { role } = useRole();
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-6 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <ShieldCheck className="size-5 text-primary" aria-hidden />
           Credentialing Tracker
@@ -32,7 +32,7 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                "rounded-md px-3 py-1.5 text-muted-foreground hover:text-foreground",
+                "rounded-md px-2 py-1.5 text-muted-foreground sm:px-3 hover:text-foreground",
                 pathname === item.href && "bg-muted font-medium text-foreground",
               )}
             >
@@ -40,7 +40,8 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
+        {/* Wraps on phones so HR's "Run daily check" doesn't squeeze the role switcher. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 gap-y-2">
           {role === "hr" && <DailyRunButton />}
           <RoleSwitcher />
         </div>
